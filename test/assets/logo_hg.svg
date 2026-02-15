@@ -1,0 +1,34 @@
+<svg
+  width="420"
+  height="120"
+  viewBox="0 0 420 120"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <!-- Icono -->
+  <rect x="20" y="20" width="80" height="80" rx="14" fill="#2563EB"/>
+
+  <text
+    x="60"
+    y="72"
+    text-anchor="middle"
+    font-family="Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
+    font-size="34"
+    font-weight="700"
+    fill="#FFFFFF"
+  >
+    Hg
+  </text>
+
+  <!-- Texto -->
+  <text
+    x="120"
+    y="70"
+    font-family="Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
+    font-size="36"
+    font-weight="600"
+    fill="#0F172A"
+  >
+    hugelist
+    <tspan fill="#2563EB">.js</tspan>
+  </text>
+</svg>
