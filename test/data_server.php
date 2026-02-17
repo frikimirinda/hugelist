@@ -9,10 +9,14 @@ header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Credentials: true");
 
+$serveExistingFiles = false;
+$removeGeneratedFiles = true;
+$sendResponse = true;
+$sendGeneratedFile = !$sendResponse;
 
 $records = (int)($_POST['data']['ramount'] ?? 1000);
 $targetFile = dirname(__FILE__) . '/_tmp/' . $records . '.json';
-if (file_exists($targetFile)) {
+if ($serveExistingFiles && file_exists($targetFile)) {
     readfile($targetFile);
     exit;
 }
@@ -30,6 +34,7 @@ $mainContainer = 'listado1';
 
 $brw = new mibrowser;
 
+// Make brw->fld from $a
 $a = explode(',', 'id,nombre,apellido,email,telefono,ciudad,pais,profesion,edad,saldo,fecha');
 $pic = explode(',', 'N04,,,,P###~-~###~-~###,,,,,N.10,D1');
 $ali = explode(',', ',R,C,,,,,,,R,R');
@@ -94,20 +99,27 @@ $brw->events['click'] = "{$mainContainer}.clickRow";
 $brw->events['dblclick'] = "{$mainContainer}.dblclickRow";
 $brw->fixedCols = 1; // número de columnas fijas a la izquierda
 $brw->mainContainerId = $mainContainer;
-$brw->data = file_get_contents($targetFile);
-//unlink($targetFile);
+$brw->data = file_get_contents($targetFile) ?: '[]';
+
+
+if ($removeGeneratedFiles)
+    unlink($targetFile);
 
 $response = new Response([
     'ok' => true,
     'data' => $brw,
+    'fld' => $brw->fld,
 ]);
 
 
-$response->toJSON($targetFile);
+if ($sendResponse)
+    $response->send();
 
-//$response->send();
+if ($sendGeneratedFile) {
+    $response->toJSON($targetFile);
+    readfile($targetFile);
+}
 
-readfile($targetFile);
 exit;
 
 // -----------------------------------------------------------
@@ -131,7 +143,6 @@ function saveJSON($j)
 
 class mibrowser
 {
-    //public array $data=[];
     public string $data;
     public array $fld = [];
     public string $tableCSS = '';
@@ -165,6 +176,7 @@ class Response
     public $css = '';
     public $js = '';
     public $data = '';
+    public $fld = [];
     public function __construct($op)
     {
         if (is_array($op)) {

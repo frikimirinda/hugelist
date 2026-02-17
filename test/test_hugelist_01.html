@@ -256,6 +256,7 @@
                             'beforeInit': $.proxy(function (ret) {
                                 console.log('beforeInit event');
                                 ret.data.data = JSON.parse(ret.data.data);
+                                debugger;
                             }),
                             'afterInit': $.proxy(function () {
                                 const end = performance.now();
