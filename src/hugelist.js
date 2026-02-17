@@ -12,6 +12,7 @@
  * Cada parte separada por + se busca de forma independiente en los campos seleccionados (o en todos si no se selecciona ninguno).
  * El + tiene prioridad: si hay algún + en la búsqueda, se usa el modo AND entre grupos. Si no hay +, funciona como antes (espacios = OR, o & al inicio para AND).
  * 
+ * 
  */
 class HugeList {
 
