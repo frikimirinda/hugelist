@@ -1,0 +1,153 @@
+.hugelist-scroll-wrapper {
+    display: flex;
+    align-items: stretch;
+    margin-top: 10px;
+}
+
+.hugelist-table {
+    overflow-y: hidden;
+    margin: 0px;
+}
+
+.hugelist-table .prevent-select {
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/*
+.hugelist-table .container {
+    -max-width: 100%;
+}
+*/
+
+/* Colorize first column */
+.hugelist-table tbody td:nth-child(1) {
+    color: red;
+    text-align: right;
+}
+
+.hugelist-table:focus {
+    outline: none;
+}
+
+.hugelist-table tr:focus {
+    border: 2px solid rgb(31, 110, 51) !important;
+}
+
+.hugelist-table tr:nth-child(even):focus td,
+.hugelist-table tr:nth-child(odd):focus td {
+    background-color: #55f3a9 !important;
+}
+
+.hugelist-table tr:nth-child(even) td {
+    background: #c5d9ff !important;
+}
+
+.hugelist-table tr:nth-child(odd) td {
+    background: #EEE !important;
+}
+
+.hugelist-table th[draggable] {
+    cursor: grab;
+}
+
+/* SCROLLBAR */
+.hugelist-scrollbar {
+    position: relative;
+    width: 20px;
+    min-width: 20px;
+    background-color: #dddddd8f;
+    border-radius: 5px;
+    opacity: 1;
+}
+
+.hugelist-scrollbar .hugelist-scrollbar-ptr {
+    position: relative;
+    width: 100%;
+    height: 0px;
+    background-color: rgba(139, 139, 139, 1);
+    min-height: 10px;
+    user-select: none;
+    display: flex;
+    border-radius: 20px;
+}
+
+.hugelist-overlay-element {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+    display: none;
+    background: transparent;
+}
+
+
+
+/* HEADERS */
+.hugelist-sort::before,
+[class*=" hugelist-sort-"]::before,
+[class^=hugelist-sort-]::before {
+    display: inline-block;
+    font-family: bootstrap-icons !important;
+    font-style: normal;
+    font-weight: 400 !important;
+    font-variant: normal;
+    text-transform: none;
+    line-height: 1;
+    vertical-align: -.125em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* https://icons.getbootstrap.com/icons/sort-up/ */
+.hugelist-sort-sort-up::before {
+    content: "\f57b";
+}
+
+/* https://icons.getbootstrap.com/icons/sort-down/ */
+.hugelist-sort-down::before {
+    content: "\f575";
+}
+
+/* END HEADERS */
+
+
+
+
+
+/* CONTEXT MENU TO CHOOSE FIELDS TO SHOW/HIDE */
+.hugelist-colmenu {
+    position: absolute;
+    z-index: 10000;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .25);
+    padding: 6px 0;
+    min-width: 180px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.hugelist-colmenu-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    font-size: 13px;
+}
+
+.hugelist-colmenu-item:hover {
+    background: #f0f0f0;
+}
+
+.hugelist-colmenu-item input[type="checkbox"] {
+    margin: 0;
+}
+
+/* END CONTEXT MENU TO CHOOSE FIELDS TO SHOW/HIDE */

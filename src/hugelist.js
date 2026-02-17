@@ -35,7 +35,8 @@ class HugeList {
 
     curTR = null;
     curTRIndex = 0;
-    indexed=false;
+    indexed = false;
+    indexOnLoad = false;
     _colDragIdx = -1;
     _hiddenCols = new Set();
 
@@ -60,10 +61,10 @@ class HugeList {
      * @param {Function} options.callBackFail - Callback en caso de error
      */
     post(options) {
-        const cmd       = options.cmd;
-        const url       = options.url ?? (typeof CONTEXT !== 'undefined' ? CONTEXT : '');
-        const data      = options.data ?? {};
-        const dataType  = options.dataType ?? 'json';
+        const cmd = options.cmd;
+        const url = options.url ?? (typeof CONTEXT !== 'undefined' ? CONTEXT : '');
+        const data = options.data ?? {};
+        const dataType = options.dataType ?? 'json';
         const callBackDone = options.callBackDone;
         const callBackFail = options.callBackFail;
         $.ajax({
@@ -74,15 +75,15 @@ class HugeList {
             data: { cmd: cmd, data: data, token: localStorage.getItem('token') },
             dataType: dataType
         })
-        .done(function (ret) {
-            if (callBackDone != null) {
-                callBackDone(ret);
-            }
-        })
-        .fail(function (jqXHR, textStatus, errorThrown) {
-            console.error('HugeList AJAX error:', textStatus, errorThrown);
-            if (callBackFail != null) callBackFail(jqXHR);
-        });
+            .done(function (ret) {
+                if (callBackDone != null) {
+                    callBackDone(ret);
+                }
+            })
+            .fail(function (jqXHR, textStatus, errorThrown) {
+                console.error('HugeList AJAX error:', textStatus, errorThrown);
+                if (callBackFail != null) callBackFail(jqXHR);
+            });
     }
 
 
@@ -95,7 +96,7 @@ class HugeList {
         this.ctlid = options.ctlid;
 
         options.dataType = 'json';
-        $('#'+this.ctlid).prepend('<div id="'+this.ctlid+'_loading" style="padding:20px;text-align:center;"> Cargando e indexando...</div>');
+        $('#' + this.ctlid).prepend('<div id="' + this.ctlid + '_loading" style="padding:20px;text-align:center;"> Loading...</div>');
 
         options.callBackDone = $.proxy(function (ret) {
             if (ret.ok) {
@@ -153,62 +154,72 @@ class HugeList {
         }
         th = "<thead class='prevent-select' id='" + this.ctlid + "_head'><tr>" + th + "</tr></thead><tbody id='" + this.ctlid + "_body'></tbody>";
 
-        // Montar la tabla (outer)
-        let ta = '<table tabindex="0" class="table ' + this.tableClass + '" style="' + this.tableCSS + '">' + th + '</table>';
+        // Montar la tabla (outer) + scrollbar en flex container
+        let ta = `<div class='hugelist-scroll-wrapper table-responsive'>`;
+        ta += '<table tabindex="0" class="table ' + this.tableClass + ' hugelist-table" style="' + this.tableCSS + '">' + th + '</table>';
+        ta += `<div class='hugelist-scrollbar'><div class='hugelist-scrollbar-ptr'></div></div>`;
+        ta += `</div>`;
 
-        // Barra de scroll
-        ta += `<div class='miscrollbar'><div class='miscrollbarptr'></div></div>`;
-        ta += `<div class='mioverlayelement'></div>`;
+        ta += `<div class='hugelist-overlay-element'></div>`;
 
         this.ctl.html(ta);
 
         $(cssScript).remove();
         $('#' + this.ctlid + '_fldcss').remove();
 
-        let css = `
-            #${this.ctlid} table:focus {
-               outline: none;
-            }
-            #${this.ctlid} tr:focus {
-               outline: 2px solid blue;
-            }
-            #${this.ctlid} th[draggable] {
-               cursor: grab;
-            }
 
-            #${this.ctlid} .miscrollbar{
-                position: absolute;
-                top: 0;
-                right: 0;
-                width: 20px;
-                height: 100%;
-                background-color: rgba(255, 0, 0, 0.1);
-                border-radius: 5px;
-                opacity: 1;
-            }
-
-            #${this.ctlid} .miscrollbarptr{
-                position: relative;
-                width: 100%;
-                height: 0px;
-                background-color: rgba(0,255, 0, 0.7);
-                min-height: 10px;
-                user-select: none;
-                display: flex;
-            }
-
-            #${this.ctlid} .mioverlayelement{
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                z-index: 1000;
-                display: none;
-                background: transparent;
-            }
-        `;
-
+        let css = '';
+        /*
+                let css = `
+                    #${this.ctlid} table:focus {
+                       outline: none;
+                    }
+                    #${this.ctlid} tr:focus {
+                       outline: 2px solid blue;
+                    }
+                    #${this.ctlid} tr:hover {
+                       color: red;
+                    }
+                    #${this.ctlid} th[draggable] {
+                       cursor: grab;
+                    }
+        
+                    #${this.ctlid} .hugelist-scroll-wrapper{
+                        display: flex;
+                        align-items: stretch;
+                    }
+        
+                    #${this.ctlid} .miscrollbar{
+                        position: relative;
+                        width: 20px;
+                        min-width: 20px;
+                        background-color: rgba(255, 0, 0, 0.1);
+                        border-radius: 5px;
+                        opacity: 1;
+                    }
+        
+                    #${this.ctlid} .miscrollbarptr{
+                        position: relative;
+                        width: 100%;
+                        height: 0px;
+                        background-color: rgba(0,255, 0, 0.7);
+                        min-height: 10px;
+                        user-select: none;
+                        display: flex;
+                    }
+        
+                    #${this.ctlid} .mioverlayelement{
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        z-index: 1000;
+                        display: none;
+                        background: transparent;
+                    }
+                `;
+        */
         // CSS para celdas fijas
         if (this.fixedCols > 0) {
             css += `
@@ -216,15 +227,6 @@ class HugeList {
                     position: -webkit-sticky;
                     position: sticky;
                     left: 0;
-                }
-                #${this.ctlid} table tr th{
-                    background: #FFF;
-                }
-                #${this.ctlid} table tr:nth-child(odd) td{
-                    background: #FFF;
-                }
-                #${this.ctlid} table tr:nth-child(even) td {
-                    background: #CCC;
                 }
             `;
         }
@@ -250,11 +252,11 @@ class HugeList {
         // Arrastre de columnas
         this.ctl.find('th')
             .on('dragstart', $.proxy(this._colDragStart, this))
-            .on('dragover',  $.proxy(this._colDragOver, this))
+            .on('dragover', $.proxy(this._colDragOver, this))
             .on('dragenter', $.proxy(this._colDragEnter, this))
             .on('dragleave', $.proxy(this._colDragLeave, this))
-            .on('drop',      $.proxy(this._colDrop, this))
-            .on('dragend',   $.proxy(this._colDragEnd, this));
+            .on('drop', $.proxy(this._colDrop, this))
+            .on('dragend', $.proxy(this._colDragEnd, this));
 
         // Menú contextual columnas
         this.ctl.find('th').on('contextmenu', $.proxy(this._showColMenu, this));
@@ -276,16 +278,32 @@ class HugeList {
         this.ctl.find('tbody').on('touchmove', $.proxy(this.touchmove, this));
 
         // Barra de scroll vertical
-        this.ctl.find('.miscrollbarptr').on('mousedown', $.proxy(this.barMouseDown, this));
-        this.ctl.find('.miscrollbarptr').on('touchstart', $.proxy(this.barTouchStart, this));
-        this.ctl.find('.mioverlayelement').on('mouseup', $.proxy(this.barMouseUp, this));
-        this.ctl.find('.miscrollbarptr').on('touchend', $.proxy(this.barTouchEnd, this));
-        this.ctl.find('.mioverlayelement').on('mousemove', $.proxy(this.barMouseMove, this));
-        this.ctl.find('.miscrollbarptr').on('touchmove', $.proxy(this.barTouchMove, this));
+        this.ctl.find('.hugelist-scrollbar-ptr').on('mousedown', $.proxy(this.barMouseDown, this));
+        this.ctl.find('.hugelist-scrollbar-ptr').on('touchstart', $.proxy(this.barTouchStart, this));
+        this.ctl.find('.hugelist-overlay-element').on('mouseup', $.proxy(this.barMouseUp, this));
+        this.ctl.find('.hugelist-scrollbar-ptr').on('touchend', $.proxy(this.barTouchEnd, this));
+        this.ctl.find('.hugelist-overlay-element').on('mousemove', $.proxy(this.barMouseMove, this));
+        this.ctl.find('.hugelist-scrollbar-ptr').on('touchmove', $.proxy(this.barTouchMove, this));
 
-//        if (this.options.events && this.options.events.afterInit) {
-//            this.options.events.afterInit();
-//        }
+        //        if (this.options.events && this.options.events.afterInit) {
+        //            this.options.events.afterInit();
+        //        }
+
+        if (this.indexOnLoad) this._buildSearchIndex();
+    }
+
+    // Ajustar líneas visibles
+    resize() {
+
+        this.render(0, 100);
+        const fv = this.detectVisibleRows();
+        if (fv.visibles >= 100)
+            this.render(0, 200);
+
+        this.rowsToRender = (fv.visibles <= 3) ? fv.visibles : fv.visibles - 3;
+        this.render(this.renderFrom);
+        const svopac = this.ctl.css('opacity');
+        this.ctl.css('opacity', svopac);
     }
 
 
@@ -308,14 +326,14 @@ class HugeList {
     tableKeyDown(e) {
         const k = e.keyCode;
         if (k == 34) {
-            this.render();              // AvPag
+            this.render();              // Page down - AvPag
         } else if (k == 33) {
-            this.render(-1);            // RePag
+            this.render(-1);            // Page up - RePag
         } else if (k == 36) {
-            this.render(0);             // Inicio
+            this.render(0);             // Home - Inicio
         } else if (k == 35) {
-            this.render(this.data.length - this.rowsToRender, this.data.length);  // Fin
-        } else if (k == 38) {          // Arriba
+            this.render(this.data.length - this.rowsToRender, this.data.length);  // End - Fin
+        } else if (k == 38) {          // Up - Arriba
             let tr = $(this.curTR).prev();
             if (tr.length == 0) {
                 this.render(-1);
@@ -323,7 +341,7 @@ class HugeList {
             }
             this.curTR = tr;
             this.curTRIndex = this.curTR.index();
-        } else if (k == 40) {          // Abajo
+        } else if (k == 40) {          // Down - Abajo
             let tr = $(this.curTR).next();
             if (tr.length == 0) {
                 this.render();
@@ -365,7 +383,7 @@ class HugeList {
         if (target.length === 0) return;
         let idx = target.index() + 1;
 
-        const ascPos  = this.orderBy.indexOf(idx);
+        const ascPos = this.orderBy.indexOf(idx);
         const descPos = this.orderBy.indexOf(-idx);
 
         if (e.shiftKey || e.altKey) {
@@ -511,11 +529,11 @@ class HugeList {
         this.ctl.find('th').on('click', $.proxy(this.clickHeader, this));
         this.ctl.find('th')
             .on('dragstart', $.proxy(this._colDragStart, this))
-            .on('dragover',  $.proxy(this._colDragOver, this))
+            .on('dragover', $.proxy(this._colDragOver, this))
             .on('dragenter', $.proxy(this._colDragEnter, this))
             .on('dragleave', $.proxy(this._colDragLeave, this))
-            .on('drop',      $.proxy(this._colDrop, this))
-            .on('dragend',   $.proxy(this._colDragEnd, this));
+            .on('drop', $.proxy(this._colDrop, this))
+            .on('dragend', $.proxy(this._colDragEnd, this));
 
         // Menú contextual columnas
         this.ctl.find('th').on('contextmenu', $.proxy(this._showColMenu, this));
@@ -615,43 +633,43 @@ class HugeList {
     // =====================================================================
 
     resetScrollbar() {
-        const scrollBar = this.ctl.find('.miscrollbar');
-        const scrollBarHeight = this.ctl.find('.table').height();
-        const scrollBarTop = this.ctl.position().top;
-        scrollBar.css({
-            height: scrollBarHeight,
-            top: scrollBarTop
-        });
-        const scrollBarPtr = this.ctl.find('.miscrollbarptr');
+        const scrollBar = this.ctl.find('.hugelist-scrollbar');
+        const scrollBarHeight = scrollBar.height();
+        const scrollBarPtr = this.ctl.find('.hugelist-scrollbar-ptr');
         this.pages = this.data.length / this.rowsToRender;
         const pageHeight = scrollBarHeight / this.pages;
-        const prtY = (this.renderFrom / this.rowsToRender) * pageHeight;
-        scrollBarPtr.css({
-            height: pageHeight,
-            top: prtY
-        });
+        scrollBarPtr.css({ height: pageHeight });
+
+        // No reposicionar si el usuario está arrastrando
+        if (scrollBarPtr.attr('isDragging') == 1) return;
+
+        const draggableHeight = scrollBarPtr[0].clientHeight;
+        const maxY = scrollBarHeight - draggableHeight;
+        const maxFrom = this.data.length - this.rowsToRender;
+        const prtY = maxFrom > 0 ? (this.renderFrom / maxFrom) * maxY : 0;
+        scrollBarPtr.css({ top: prtY });
     }
 
     barMouseDown(e) {
-        const draggable = this.ctl.find('.miscrollbarptr');
+        const draggable = this.ctl.find('.hugelist-scrollbar-ptr');
         draggable.attr('isDragging', 1);
         draggable.attr('offsetY', e.clientY - draggable[0].getBoundingClientRect().top);
         e.preventDefault();
-        this.ctl.find('.mioverlayelement').show();
+        this.ctl.find('.hugelist-overlay-element').show();
     }
 
     barTouchStart(e) {
-        const draggable = this.ctl.find('.miscrollbarptr');
+        const draggable = this.ctl.find('.hugelist-scrollbar-ptr');
         draggable.attr('isDragging', 1);
         draggable.attr('offsetY', e.touches[0].clientY - draggable[0].getBoundingClientRect().top);
         e.preventDefault();
     }
 
     barMouseUp(e) {
-        const draggable = this.ctl.find('.miscrollbarptr');
+        const draggable = this.ctl.find('.hugelist-scrollbar-ptr');
         if (draggable.attr('isDragging') == 1) {
             draggable.attr('isDragging', 0);
-            this.ctl.find('.mioverlayelement').hide();
+            this.ctl.find('.hugelist-overlay-element').hide();
         }
     }
 
@@ -660,9 +678,9 @@ class HugeList {
     }
 
     barMouseMove(e) {
-        const draggable = this.ctl.find('.miscrollbarptr');
+        const draggable = this.ctl.find('.hugelist-scrollbar-ptr');
         if (draggable.attr('isDragging') != 1) return;
-        const container = this.ctl.find('.miscrollbar');
+        const container = this.ctl.find('.hugelist-scrollbar');
         const containerRect = container[0].getBoundingClientRect();
         let y = e.clientY - containerRect.top - draggable.attr('offsetY') * 1;
 
@@ -674,17 +692,18 @@ class HugeList {
 
         draggable.css('top', y);
 
-        const scrollBarHeight = this.ctl.find('tbody').height();
-        this.pages = this.data.length / this.rowsToRender;
-        const pageHeight = scrollBarHeight / this.pages;
-        const from = Math.ceil((y / pageHeight) * this.rowsToRender);
+        // Calcular posición de datos proporcional al recorrido útil
+        const maxY = containerHeight - draggableHeight;
+        const ratio = maxY > 0 ? y / maxY : 0;
+        const maxFrom = this.data.length - this.rowsToRender;
+        const from = Math.round(ratio * maxFrom);
         this.render(from);
     }
 
     barTouchMove(e) {
         const draggable = $(e.target);
         if (draggable.attr('isDragging') != 1) return;
-        const container = this.ctl.find('.miscrollbar');
+        const container = this.ctl.find('.hugelist-scrollbar');
         const containerRect = container[0].getBoundingClientRect();
         let y = e.touches[0].clientY - containerRect.top - draggable.attr('offsetY') * 1;
 
@@ -696,10 +715,11 @@ class HugeList {
 
         draggable.css('top', y);
 
-        const scrollBarHeight = this.ctl.find('tbody').height();
-        this.pages = this.data.length / this.rowsToRender;
-        const pageHeight = scrollBarHeight / this.pages;
-        const from = Math.ceil((y / pageHeight) * this.rowsToRender);
+        // Calcular posición de datos proporcional al recorrido útil
+        const maxY = containerHeight - draggableHeight;
+        const ratio = maxY > 0 ? y / maxY : 0;
+        const maxFrom = this.data.length - this.rowsToRender;
+        const from = Math.round(ratio * maxFrom);
         this.render(from);
 
         e.preventDefault();
@@ -767,7 +787,7 @@ class HugeList {
         for (let x = this.renderFrom; x <= this.renderTo; x++) {
             tr += `<tr tabindex="0" idx="${x}">`;
             for (var f in this.fld) {
-                const v = (this.fld[f].pic != false && typeof Picture!='undefined') ? Picture.format(this.data[x][f], this.fld[f].pic) : this.data[x][f];
+                const v = (this.fld[f].pic != false && typeof Picture != 'undefined') ? Picture.format(this.data[x][f], this.fld[f].pic) : this.data[x][f];
                 //const v = (this.fld[f].pic == false) ? this.data[x][f] : Picture.format(this.data[x][f], this.fld[f].pic);
                 tr += '<td>' + v + '</td>';
             }
@@ -790,9 +810,11 @@ class HugeList {
         for (let i = 0; i < this.orderBy.length; i++) {
             const col = this.orderBy[i];
             if (col >= 0) {
-                this.ctl.find('th').eq(col - 1).append('<i class="bi bi-sort-down"></i>');
+                this.ctl.find('th').eq(col - 1).append('<i class="hugelist-sort hugelist-sort-down"></i>');
+                //this.ctl.find('th').eq(col - 1).append('<i class="bi bi-sort-down"></i>');
             } else {
-                this.ctl.find('th').eq(Math.abs(col) - 1).append('<i class="bi bi-sort-up"></i>');
+                this.ctl.find('th').eq(Math.abs(col) - 1).append('<i class="hugelist-sort hugelist-sort-up"></i>');
+                //this.ctl.find('th').eq(Math.abs(col) - 1).append('<i class="bi bi-sort-up"></i>');
             }
         }
     }
@@ -860,7 +882,7 @@ class HugeList {
 
     dataFind(find, flds) {
 
-        if( !this.indexed )this._buildSearchIndex();
+        if (!this.indexed) this._buildSearchIndex();
 
         if (!Array.isArray(flds))
             flds = ('' + flds).split(',');
@@ -995,7 +1017,7 @@ class HugeList {
             case 'L': colcss += 'text-align:left;'; break;
             case 'R': colcss += 'text-align:right;'; break;
             case 'C': colcss += 'text-align:center;'; break;
-            default:  colcss += 'text-align:left;';
+            default: colcss += 'text-align:left;';
         }
         colcss += this.fld[idx].css ?? '';
         return '#' + this.ctlid + ' td:nth-child(' + (idx * 1 + 1) + '){' + colcss + '}   ';
@@ -1042,7 +1064,7 @@ class HugeList {
     }
 }
 
-
+/*
 // CSS global prevent-select + context menu
 (function () {
     const css = `
@@ -1080,3 +1102,4 @@ class HugeList {
     }`;
     $('html > head').append($('<style type="text/css">' + css + '</style>'));
 })();
+*/
