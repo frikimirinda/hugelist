@@ -102,8 +102,6 @@ $brw->mainContainerId = $mainContainer;
 $brw->data = file_get_contents($targetFile) ?: '[]';
 
 
-if ($removeGeneratedFiles)
-    unlink($targetFile);
 
 $response = new Response([
     'ok' => true,
@@ -119,6 +117,10 @@ if ($sendGeneratedFile) {
     $response->toJSON($targetFile);
     readfile($targetFile);
 }
+
+if ($removeGeneratedFiles)
+    unlink($targetFile);
+
 
 exit;
 
