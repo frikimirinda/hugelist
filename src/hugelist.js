@@ -18,7 +18,7 @@ class HugeList {
 
     data = {};
     dataSrc = {};
-    dataNorm = [];  // Índice de búsqueda pre-calculado (normalizado)
+    dataNorm = [];  // Pre-calculated search index (normalized)
     fld = {};
     tableCSS = '';
     tableClass = '';
@@ -47,19 +47,19 @@ class HugeList {
 
 
     // =====================================================================
-    //  AJAX independiente
+    //  Independent AJAX
     // =====================================================================
 
     /**
-     * Realiza una petición POST AJAX de forma independiente (sin mifw).
+     * Perform a POST AJAX request independently (without mifw).
      *
      * @param {Object} options
-     * @param {string} options.cmd          - Comando a enviar al servidor
-     * @param {string} options.url          - URL destino (por defecto window.CONTEXT)
-     * @param {Object} options.data         - Datos adicionales a enviar
-     * @param {string} options.dataType     - Tipo de respuesta esperada ('json','html',...)
-     * @param {Function} options.callBackDone - Callback en caso de éxito
-     * @param {Function} options.callBackFail - Callback en caso de error
+     * @param {string} options.cmd          - Command to send to server
+     * @param {string} options.url          - Destination URL (default window.CONTEXT)
+     * @param {Object} options.data         - Additional data to send
+     * @param {string} options.dataType     - Expected response type ('json','html',...)
+     * @param {Function} options.callBackDone - Callback on success
+     * @param {Function} options.callBackFail - Callback on error
      */
     post(options) {
         const cmd = options.cmd;
@@ -89,9 +89,8 @@ class HugeList {
 
 
     // =====================================================================
-    //  Petición de datos al servidor
+    //  Request Server Data
     // =====================================================================
-
     requestServerData(options) {
         this.options = options;
         this.ctlid = options.ctlid;
@@ -131,20 +130,17 @@ class HugeList {
         this.post(options);
     }
 
-
     // =====================================================================
-    //  Inicialización del control
+    //  Initialize Control
     // =====================================================================
-
     initCtl() {
-
         this.ctl = $('#' + this.ctlid);
         const cssScript = '#' + this.ctlid + '_css';
 
         const svopac = this.ctl.css('opacity');
         this.ctl.css('opacity', 0);
 
-        // Montar cabecera
+        // Compose Header
         let fieldCss = '';
         let th = '';
         for (var x in this.fld) {
@@ -155,12 +151,11 @@ class HugeList {
         }
         th = "<thead class='prevent-select' id='" + this.ctlid + "_head'><tr>" + th + "</tr></thead><tbody id='" + this.ctlid + "_body'></tbody>";
 
-        // Montar la tabla (outer) + scrollbar en flex container
+        // Compose table (outer) + scrollbar in flex container
         let ta = `<div class='hugelist-scroll-wrapper table-responsive'>`;
         ta += '<table tabindex="0" class="table ' + this.tableClass + ' hugelist-table" style="' + this.tableCSS + '">' + th + '</table>';
         ta += `<div class='hugelist-scrollbar'><div class='hugelist-scrollbar-ptr'></div></div>`;
         ta += `</div>`;
-
         ta += `<div class='hugelist-overlay-element'></div>`;
 
         this.ctl.html(ta);
@@ -221,7 +216,7 @@ class HugeList {
                     }
                 `;
         */
-        // CSS para celdas fijas
+        // CSS for fixed cells
         if (this.fixedCols > 0) {
             css += `
                 #${this.ctlid} table tr>th:nth-child(-n+${this.fixedCols}),tr>td:nth-child(-n+${this.fixedCols}) {
@@ -237,7 +232,7 @@ class HugeList {
 
         this.setOrderIcons();
 
-        // Ajustar líneas visibles
+        // Adjust visible rows
         this.render(0, 100);
         const fv = this.detectVisibleRows();
         if (fv.visibles >= 100)
@@ -247,10 +242,10 @@ class HugeList {
         this.render(this.renderFrom);
         this.ctl.css('opacity', svopac);
 
-        // Ordenación
+        // Sorting
         this.ctl.find('th').on('click', $.proxy(this.clickHeader, this));
 
-        // Arrastre de columnas
+        // Column drag
         this.ctl.find('th')
             .on('dragstart', $.proxy(this._colDragStart, this))
             .on('dragover', $.proxy(this._colDragOver, this))
@@ -259,16 +254,16 @@ class HugeList {
             .on('drop', $.proxy(this._colDrop, this))
             .on('dragend', $.proxy(this._colDragEnd, this));
 
-        // Menú contextual columnas
+        // Column context menu
         this.ctl.find('th').on('contextmenu', $.proxy(this._showColMenu, this));
 
         // Wheel
         this.ctl.on('wheel', $.proxy(this.wheelEvent, this));
 
-        // Teclado
+        // Keyboard
         this.ctl.find('.table').keydown($.proxy(this.tableKeyDown, this));
 
-        // Click en la tabla
+        // Click on table
         this.resetTRClick();
         this.ctl.find('tbody tr').first().focus().trigger('click', 'silent');
 
@@ -278,7 +273,7 @@ class HugeList {
         this.ctl.find('tbody').on('touchstart', $.proxy(this.touchstart, this));
         this.ctl.find('tbody').on('touchmove', $.proxy(this.touchmove, this));
 
-        // Barra de scroll vertical
+        // Vertical scrollbar
         this.ctl.find('.hugelist-scrollbar-ptr').on('mousedown', $.proxy(this.barMouseDown, this));
         this.ctl.find('.hugelist-scrollbar-ptr').on('touchstart', $.proxy(this.barTouchStart, this));
         this.ctl.find('.hugelist-overlay-element').on('mouseup', $.proxy(this.barMouseUp, this));
@@ -293,7 +288,7 @@ class HugeList {
         if (this.indexOnLoad) this._buildSearchIndex();
     }
 
-    // Ajustar líneas visibles
+    // Adjust visible rows
     resize() {
 
         this.render(0, 100);
@@ -309,7 +304,7 @@ class HugeList {
 
 
     // =====================================================================
-    //  Eventos
+    //  Events
     // =====================================================================
 
     wheelEvent(e) {
@@ -363,7 +358,7 @@ class HugeList {
                 this.curTRIndex = this.curTR.index();
                 if (p == null && this.events['click'] != null) {
                     try {
-                        eval(this.events['click'])(this.data[this.curTR.attr('idx')]);
+                        eval(this.events['click'])(this.data[this.curTR.attr('idx')], this.curTR.attr('idx'));
                     } catch (e) { console.log('click error: ' + e); }
                 }
             }, this)).
@@ -388,7 +383,7 @@ class HugeList {
         const descPos = this.orderBy.indexOf(-idx);
 
         if (e.shiftKey || e.altKey) {
-            // Multi-columna: añadir o invertir
+            // Multi-column: add or invert
             if (ascPos !== -1)
                 this.orderBy[ascPos] = -idx;
             else if (descPos !== -1)
@@ -396,7 +391,7 @@ class HugeList {
             else
                 this.orderBy.push(idx);
         } else {
-            // Columna única: invertir si ya existe, o nueva ascendente
+            // Single column: invert if exists, or new ascending
             if (ascPos !== -1)
                 this.orderBy = [-idx];
             else if (descPos !== -1)
@@ -413,7 +408,7 @@ class HugeList {
 
 
     // =====================================================================
-    //  Arrastre de columnas (drag & drop)
+    //  Column drag & drop
     // =====================================================================
 
     _colDragStart(e) {
@@ -463,21 +458,21 @@ class HugeList {
         if (fromIdx === toIdx) return;
         const len = this.fld.length;
 
-        // Construir permutación: perm[newPos] = oldPos
+        // Build permutation: perm[newPos] = oldPos
         const perm = [];
         for (let i = 0; i < len; i++) perm.push(i);
         const moved = perm.splice(fromIdx, 1)[0];
         perm.splice(toIdx, 0, moved);
 
-        // Reordenar fld
+        // Reorder fld
         const oldFld = this.fld.slice();
         for (let i = 0; i < len; i++) this.fld[i] = oldFld[perm[i]];
 
-        // Reordenar colWidths
+        // Reorder colWidths
         const oldCW = this.colWidths.slice();
         for (let i = 0; i < len; i++) this.colWidths[i] = oldCW[perm[i]] || 0;
 
-        // Remapear orderBy (índices 1-based)
+        // Remap orderBy (1-based indices)
         const old2new = new Array(len);
         for (let i = 0; i < len; i++) old2new[perm[i]] = i;
         for (let i = 0; i < this.orderBy.length; i++) {
@@ -486,14 +481,14 @@ class HugeList {
             this.orderBy[i] = sign * (old2new[abs] + 1);
         }
 
-        // Reordenar datos in-place (dataSrc y data comparten las mismas filas)
+        // Reorder data in-place (dataSrc and data share the same rows)
         for (let i = 0; i < this.dataSrc.length; i++) {
             const row = this.dataSrc[i];
             const tmp = row.slice();
             for (let j = 0; j < len; j++) row[j] = tmp[perm[j]];
         }
 
-        // Remapear columnas ocultas
+        // Remap hidden columns
         if (this._hiddenCols.size > 0) {
             const newHidden = new Set();
             this._hiddenCols.forEach(oldIdx => {
@@ -502,15 +497,15 @@ class HugeList {
             this._hiddenCols = newHidden;
         }
 
-        // Invalidar índice de búsqueda
+        // Invalidate search index
         this.indexed = false;
 
-        // Reconstruir parte visual
+        // Rebuild visual part
         this._rebuildColumns();
     }
 
     _rebuildColumns() {
-        // Regenerar cabecera
+        // Regenerate header
         let fieldCss = '';
         let th = '';
         for (let x = 0; x < this.fld.length; x++) {
@@ -519,14 +514,14 @@ class HugeList {
         }
         this.ctl.find('thead tr').html(th);
 
-        // Reemplazar CSS de campos
+        // Replace field CSS
         $('#' + this.ctlid + '_fldcss').remove();
         $('html > head').append($('<style id="' + this.ctlid + '_fldcss" type="text/css">' + fieldCss + '</style>'));
 
         // Re-render body
         this.render(this.renderFrom);
 
-        // Re-enlazar eventos en th
+        // Re-link events on th
         this.ctl.find('th').on('click', $.proxy(this.clickHeader, this));
         this.ctl.find('th')
             .on('dragstart', $.proxy(this._colDragStart, this))
@@ -536,7 +531,7 @@ class HugeList {
             .on('drop', $.proxy(this._colDrop, this))
             .on('dragend', $.proxy(this._colDragEnd, this));
 
-        // Menú contextual columnas
+        // Column menu
         this.ctl.find('th').on('contextmenu', $.proxy(this._showColMenu, this));
 
         this.setOrderIcons();
@@ -546,7 +541,7 @@ class HugeList {
 
 
     // =====================================================================
-    //  Menú contextual de visibilidad de columnas
+    //  Column visibility context menu
     // =====================================================================
 
     _showColMenu(e) {
@@ -566,7 +561,7 @@ class HugeList {
 
         $('body').append(menu);
 
-        // Posicionar en el puntero del ratón, ajustando si se sale de la ventana
+        // Position at mouse pointer, adjusting if it goes off-screen
         let x = e.originalEvent.pageX;
         let y = e.originalEvent.pageY;
         const menuW = menu.outerWidth();
@@ -575,13 +570,13 @@ class HugeList {
         if (y + menuH > $(window).height() + $(window).scrollTop()) y -= menuH;
         menu.css({ left: x, top: y });
 
-        // Eventos de los checkboxes
+        // Checkbox events
         menu.find('input[type="checkbox"]').on('change', $.proxy(function (ev) {
             const idx = $(ev.target).data('colidx');
             this._toggleColVisibility(idx, ev.target.checked);
         }, this));
 
-        // Cerrar al hacer clic fuera
+        // Close when clicking outside
         setTimeout($.proxy(function () {
             $(document).on('mousedown.hugelist_colmenu', $.proxy(function (ev) {
                 if ($(ev.target).closest('.hugelist-colmenu').length === 0) {
@@ -604,9 +599,9 @@ class HugeList {
         if (visible) {
             this._hiddenCols.delete(idx);
         } else {
-            // No permitir ocultar todas las columnas
+            // Don't allow hiding all columns
             if (this._hiddenCols.size >= this.fld.length - 1) {
-                // Restaurar el checkbox
+                // Restore checkbox
                 $('#' + this.ctlid + '_colmenu input[data-colidx="' + idx + '"]').prop('checked', true);
                 return;
             }
@@ -630,7 +625,7 @@ class HugeList {
 
 
     // =====================================================================
-    //  Scrollbar personalizada
+    //  Custom scrollbar
     // =====================================================================
 
     resetScrollbar() {
@@ -641,7 +636,7 @@ class HugeList {
         const pageHeight = scrollBarHeight / this.pages;
         scrollBarPtr.css({ height: pageHeight });
 
-        // No reposicionar si el usuario está arrastrando
+        // Don't reposition if the user is dragging
         if (scrollBarPtr.attr('isDragging') == 1) return;
 
         const draggableHeight = scrollBarPtr[0].clientHeight;
@@ -693,7 +688,7 @@ class HugeList {
 
         draggable.css('top', y);
 
-        // Calcular posición de datos proporcional al recorrido útil
+        // Calculate data position proportional to useful travel
         const maxY = containerHeight - draggableHeight;
         const ratio = maxY > 0 ? y / maxY : 0;
         const maxFrom = this.data.length - this.rowsToRender;
@@ -716,7 +711,7 @@ class HugeList {
 
         draggable.css('top', y);
 
-        // Calcular posición de datos proporcional al recorrido útil
+        // Calculate data position proportional to useful travel
         const maxY = containerHeight - draggableHeight;
         const ratio = maxY > 0 ? y / maxY : 0;
         const maxFrom = this.data.length - this.rowsToRender;
@@ -728,7 +723,7 @@ class HugeList {
 
 
     // =====================================================================
-    //  Touch (móvil/tablet)
+    //  Touch (mobile/tablet)
     // =====================================================================
 
     touchstart(e) {
@@ -754,7 +749,7 @@ class HugeList {
 
 
     // =====================================================================
-    //  Renderizado
+    //  Render
     // =====================================================================
 
     updateRender() {
@@ -803,7 +798,7 @@ class HugeList {
 
 
     // =====================================================================
-    //  Ordenación
+    //  Sorting
     // =====================================================================
 
     setOrderIcons() {
@@ -838,10 +833,14 @@ class HugeList {
 
 
     // =====================================================================
-    //  Búsqueda / Filtro
+    //  Search / Filter
     // =====================================================================
 
-    // Normalizar texto para búsquedas (minúsculas, sin acentos, fechas canónicas)
+    getData(ix) {
+        return this.data[ix];
+    }
+
+    // Normalize text for searches (lowercase, no accents, canonical dates)
     _norm(str) {
         let s = String(str).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         const parts = s.split(/[\/\-]/);
@@ -859,7 +858,7 @@ class HugeList {
         return s;
     }
 
-    // Construir índice de búsqueda pre-normalizado (se llama una sola vez al cargar datos)
+    // Build pre-normalized search index (called once when loading data)
     _buildSearchIndex() {
         if (this.options.events && this.options.events.startIndexing) {
             this.options.events.startIndexing();
@@ -900,7 +899,7 @@ class HugeList {
         const result = [];
 
         if (find.indexOf('+') !== -1) {
-            // ---- Modo AND por + ----
+            // ---- AND mode by + ----
             const grupos = find.split('+').map(g => this._norm(g.trim())).filter(g => g.length > 0);
             if (grupos.length === 0) return 0;
 
@@ -931,7 +930,7 @@ class HugeList {
             if (terminos.length === 0) return 0;
 
             if (findAll && useFlds) {
-                // ---- &AND con campos: cada campo seleccionado debe contener todos los términos ----
+                // ---- &AND with fields: each selected field must contain all terms ----
                 for (let i = 0; i < src.length; i++) {
                     const nr = nrm[i];
                     let ok = true;
@@ -945,7 +944,7 @@ class HugeList {
                 }
 
             } else if (findAll) {
-                // ---- &AND sin campos: al menos un campo debe contener todos los términos ----
+                // ---- &AND without fields: at least one field must contain all terms ----
                 for (let i = 0; i < src.length; i++) {
                     const nr = nrm[i];
                     let found = false;
@@ -960,7 +959,7 @@ class HugeList {
                 }
 
             } else if (useFlds) {
-                // ---- OR con campos: algún término en algún campo seleccionado ----
+                // ---- OR with fields: some term in some selected field ----
                 for (let i = 0; i < src.length; i++) {
                     const nr = nrm[i];
                     let found = false;
@@ -973,7 +972,7 @@ class HugeList {
                 }
 
             } else {
-                // ---- OR sin campos: algún término en algún campo ----
+                // ---- OR without fields: some term in some field ----
                 for (let i = 0; i < src.length; i++) {
                     const nr = nrm[i];
                     let found = false;
@@ -1008,7 +1007,7 @@ class HugeList {
 
 
     // =====================================================================
-    //  Utilidades
+    //  Utilities
     // =====================================================================
 
     makeCssForField(idx) {
