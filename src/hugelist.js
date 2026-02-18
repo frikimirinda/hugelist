@@ -41,6 +41,9 @@ class HugeList {
     _colDragIdx = -1;
     _hiddenCols = new Set();
 
+    _hasCallbacks = false;
+    _hasCallbackFormatRow = false;
+
     colWidths = [];
 
     pages = 0;
@@ -112,6 +115,12 @@ class HugeList {
                 this.events = ret.data.events ?? [];
                 this.fixedCols = ret.data.fixedCols ?? 0;
                 this.mainContainerId = ret.data.mainContainerId;
+                if (this.options.callbacks) {
+                    this._hasCallbacks = true;
+                    if (this.options.callbacks.formatRow) {
+                        this._hasCallbackFormatRow = true;
+                    }
+                }
                 this.initCtl();
                 if (this.options.events && this.options.events.afterInit) {
                     this.options.events.afterInit(ret);
@@ -141,12 +150,12 @@ class HugeList {
         this.ctl.css('opacity', 0);
 
         // Compose Header
-        let fieldCss = '';
+        let fieldCSS = '';
         let th = '';
         for (var x in this.fld) {
-            x = x * 1;
+            //x = x * 1;
             th += '<th draggable="true"><span>' + this.fld[x].label + '</span></th>';
-            fieldCss += this.makeCssForField(x);
+            fieldCSS += this.makeCssForField(x);
             this.colWidths[x] = 0;
         }
         th = "<thead class='prevent-select' id='" + this.ctlid + "_head'><tr>" + th + "</tr></thead><tbody id='" + this.ctlid + "_body'></tbody>";
@@ -160,62 +169,13 @@ class HugeList {
 
         this.ctl.html(ta);
 
+        /*
         $(cssScript).remove();
         $('#' + this.ctlid + '_fldcss').remove();
-
+        */
 
         let css = '';
-        /*
-                let css = `
-                    #${this.ctlid} table:focus {
-                       outline: none;
-                    }
-                    #${this.ctlid} tr:focus {
-                       outline: 2px solid blue;
-                    }
-                    #${this.ctlid} tr:hover {
-                       color: red;
-                    }
-                    #${this.ctlid} th[draggable] {
-                       cursor: grab;
-                    }
-        
-                    #${this.ctlid} .hugelist-scroll-wrapper{
-                        display: flex;
-                        align-items: stretch;
-                    }
-        
-                    #${this.ctlid} .miscrollbar{
-                        position: relative;
-                        width: 20px;
-                        min-width: 20px;
-                        background-color: rgba(255, 0, 0, 0.1);
-                        border-radius: 5px;
-                        opacity: 1;
-                    }
-        
-                    #${this.ctlid} .miscrollbarptr{
-                        position: relative;
-                        width: 100%;
-                        height: 0px;
-                        background-color: rgba(0,255, 0, 0.7);
-                        min-height: 10px;
-                        user-select: none;
-                        display: flex;
-                    }
-        
-                    #${this.ctlid} .mioverlayelement{
-                        position: fixed;
-                        top: 0;
-                        left: 0;
-                        width: 100%;
-                        height: 100%;
-                        z-index: 1000;
-                        display: none;
-                        background: transparent;
-                    }
-                `;
-        */
+
         // CSS for fixed cells
         if (this.fixedCols > 0) {
             css += `
@@ -226,9 +186,12 @@ class HugeList {
                 }
             `;
         }
-
+        /*
         $('html > head').append($('<style id="' + cssScript + '" type="text/css">' + css + '</style>'));
-        $('html > head').append($('<style id="' + this.ctlid + '_fldcss" type="text/css">' + fieldCss + '</style>'));
+        $('html > head').append($('<style id="' + this.ctlid + '_fldcss" type="text/css">' + fieldCSS + '</style>'));
+        */
+        $(cssScript).remove();
+        $('html > head').append($('<style id="' + cssScript + '" type="text/css">' + css + fieldCSS + '</style>'));
 
         this.setOrderIcons();
 
@@ -782,10 +745,19 @@ class HugeList {
         let tr = '';
         for (let x = this.renderFrom; x <= this.renderTo; x++) {
             tr += `<tr tabindex="0" idx="${x}">`;
-            for (var f in this.fld) {
-                const v = (this.fld[f].pic != false && typeof Picture != 'undefined') ? Picture.format(this.data[x][f], this.fld[f].pic) : this.data[x][f];
-                //const v = (this.fld[f].pic == false) ? this.data[x][f] : Picture.format(this.data[x][f], this.fld[f].pic);
-                tr += '<td>' + v + '</td>';
+            // Call callback formatRow if exists, pass a copy of data, so it can't modify the original data, but the user can if modify realdata param.
+            if (this._hasCallbackFormatRow) {
+                const p = structuredClone(this.data[x]);
+                const trv = this.options.callbacks.formatRow({ idx: x, data: p, fld: this.fld, realdata: this.data[x] }) ?? this.data[x];
+                for (var f in this.fld) {
+                    tr += '<td>' + trv[f] + '</td>';
+                }
+            } else {
+                // Else use default rendering (use Picture.format if pic is set, else raw value)
+                for (var f in this.fld) {
+                    const v = (this.fld[f].pic != false && typeof Picture != 'undefined') ? Picture.format(this.data[x][f], this.fld[f].pic) : this.data[x][f];
+                    tr += '<td>' + v + '</td>';
+                }
             }
             tr += '</tr>';
         }
@@ -1009,18 +981,57 @@ class HugeList {
     // =====================================================================
     //  Utilities
     // =====================================================================
+    showCol(idx, flg = true) {
+        $('#' + this.ctlid).find('tr td:nth-child(' + (1 + idx * 1) + '), tr th:nth-child(' + (1 + idx * 1) + ')').css('display', flg ? 'table-cell' : 'none');
+    }
+
+    hideCol(idx) {
+        this.showCol(idx, false);
+    }
+
+    showAllCols() {
+        $('#' + this.ctlid).find('tr td, tr th').css('display', 'table-cell');
+    }
+
+    hideAllCols() {
+        $('#' + this.ctlid).find('tr td, tr th').css('display', 'none');
+    }
+
+    showColByField(fld, flg = true) {
+        debugger;
+        const idx = this.fld.findIndex(x => x.fld == fld);
+        if (idx != -1) this.showCol(idx, flg);
+    }
+
+    hideColByField(fld) {
+        this.showColByField(fld, false);
+    }
+
+    showAllColsByField() {
+        this.fld.forEach((f, idx) => this.showCol(idx, true));
+    }
+
+    hideAllColsByField() {
+        this.fld.forEach((f, idx) => this.showCol(idx, false));
+    }
+
 
     makeCssForField(idx) {
-        let colcss = '';
+        let colcss, ret = '';
         const align = (this.fld[idx].align == null) ? '' : this.fld[idx].align;
         switch (align.toUpperCase()) {
+            case 'H':
+                //ret += '#' + this.ctlid + ' th:nth-child(' + (idx * 1 + 1) + '){display:none} ';
+                ret = `#${this.ctlid} th:nth-child( ${1 + idx * 1} ){display:none} `;
+                break;
             case 'L': colcss += 'text-align:left;'; break;
             case 'R': colcss += 'text-align:right;'; break;
             case 'C': colcss += 'text-align:center;'; break;
             default: colcss += 'text-align:left;';
         }
         colcss += this.fld[idx].css ?? '';
-        return '#' + this.ctlid + ' td:nth-child(' + (idx * 1 + 1) + '){' + colcss + '}   ';
+        //const c1 = '#' + this.ctlid + ' td:nth-child(' + (idx * 1 + 1) + '){' + colcss + '}   ';
+        return `#${this.ctlid} td:nth-child( ${1 + idx * 1} ){ ${colcss} }   ${ret}`;
     }
 
     detectVisibleRows() {

@@ -248,7 +248,7 @@
                     };
                     let options = {
                         //'url':'https://www.amuralarte.es/mirinda/data_sample_1.php',
-                        'url': 'https://mirinda_local.es/hugelist/test/data_server.php',
+                        'url': 'https://mirinda-local.es/hugelist/test/data_server.php',
                         'cmd': 'getDatos',
                         'data': datos,
                         'ctlid': 'brw',
@@ -256,7 +256,6 @@
                             'beforeInit': $.proxy(function (ret) {
                                 console.log('beforeInit event');
                                 ret.data.data = JSON.parse(ret.data.data);
-                                debugger;
                             }),
                             'afterInit': $.proxy(function () {
                                 const end = performance.now();
@@ -281,6 +280,22 @@
                                 const ms = (end - this.startIndexingTime).toFixed(3).toLocaleString();
                                 const sg = (ms / 1000).toFixed(3);
                                 console.log(`Indexing end (endIndexing event)... ${ms}ms (${sg} seconds)`);
+                            }),
+                        },
+                        'callbacks': {
+                            'formatRow': $.proxy(function (ret) {
+                                // ret.idx is the index of the row in the original data
+                                // ret.data is a copy of the original data, so you can modify it without affecting the original data
+                                // ret.fld is the array of field names
+                                // ret.realdata is the original data, so you can modify it if you want to modify the original data
+                                if (1 == 0) {
+                                    console.log('formatRow callback idx', ret.idx);
+                                    console.log(ret);
+                                    ret.data[2] = ret.data[2] + '*';
+                                    // You can modify realdata if you want to modify the original data
+                                    // ret.realdata[2] = ret.realdata[2] + '---';
+                                    return ret.data;
+                                }
                             }),
                         }
                     }

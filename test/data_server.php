@@ -10,7 +10,7 @@ header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Credentials: true");
 
 $serveExistingFiles = false;
-$removeGeneratedFiles = true;
+$removeGeneratedFiles = false;
 $sendResponse = true;
 $sendGeneratedFile = !$sendResponse;
 
@@ -20,6 +20,10 @@ if ($serveExistingFiles && file_exists($targetFile)) {
     readfile($targetFile);
     exit;
 }
+else {
+    unlink($targetFile);
+}
+
 if ($records < 0 || $records > 1000000)
     $records = 1000;
 
@@ -37,7 +41,7 @@ $brw = new mibrowser;
 // Make brw->fld from $a
 $a = explode(',', 'id,nombre,apellido,email,telefono,ciudad,pais,profesion,edad,saldo,fecha');
 $pic = explode(',', 'N04,,,,P###~-~###~-~###,,,,,N.10,D1');
-$ali = explode(',', ',R,C,,,,,,,R,R');
+$ali = explode(',', 'H,R,,,,,,,,R,R');
 $css = explode(',', ',color:green');
 foreach ($a as $k => $v) {
     $brw->fld[] = new mibrowser_fld(
@@ -102,7 +106,7 @@ $brw->mainContainerId = $mainContainer;
 $brw->data = file_get_contents($targetFile) ?: '[]';
 
 
-
+// Endding...
 $response = new Response([
     'ok' => true,
     'data' => $brw,
@@ -120,7 +124,6 @@ if ($sendGeneratedFile) {
 
 if ($removeGeneratedFiles)
     unlink($targetFile);
-
 
 exit;
 
