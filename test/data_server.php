@@ -41,15 +41,17 @@ $brw = new mibrowser;
 // Make brw->fld from $a
 $a = explode(',', 'id,nombre,apellido,email,telefono,ciudad,pais,profesion,edad,saldo,fecha');
 $pic = explode(',', 'N04,,,,P###~-~###~-~###,,,,,N.10,D1');
-$ali = explode(',', 'H,R,,,,,,,,R,R');
+$ali = explode(',', ',,,,,,,,R,R,R');
 $css = explode(',', ',color:green');
+$ops = explode(',', 'c,,,,,,,,S'); // colops
 foreach ($a as $k => $v) {
     $brw->fld[] = new mibrowser_fld(
         $v, // value
         ucfirst($v), // header
         $pic[$k] ?? '', // picture
         $ali[$k] ?? '', // align
-        $css[$k] ?? '' // css
+        $css[$k] ?? '', // css
+        $ops[$k] ?? '' // colops
         );
 }
 
@@ -101,7 +103,7 @@ $brw->tableClass[] = 'table-hover';
 $brw->tableCSS = 'white-space: nowrap; cursor:default; ';
 $brw->events['click'] = "{$mainContainer}.clickRow";
 $brw->events['dblclick'] = "{$mainContainer}.dblclickRow";
-$brw->fixedCols = 1; // número de columnas fijas a la izquierda
+$brw->fixedCols = 0; // número de columnas fijas a la izquierda
 $brw->mainContainerId = $mainContainer;
 $brw->data = file_get_contents($targetFile) ?: '[]';
 
@@ -164,13 +166,15 @@ class mibrowser_fld
     public $pic;
     public $align;
     public $css;
-    public function __construct($name, $label = '', $picture = '', $align = '', $css = '')
+    public $colops;
+    public function __construct($name, $label = '', $picture = '', $align = '', $css = '', $colops = '')
     {
         $this->name = $name;
         $this->label = $label;
         $this->pic = $picture;
         $this->align = $align;
         $this->css = $css;
+        $this->colops = $colops;
     }
 }
 

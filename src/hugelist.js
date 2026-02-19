@@ -30,6 +30,7 @@ class HugeList {
     ctlid = null;
     ctl = null;
     options = {};
+    showTotalRow = null;   // (option) Indicates if must paint a total row.
     renderFrom = 0;
     rowsToRender = 20;
     renderTo = 0;
@@ -43,6 +44,7 @@ class HugeList {
 
     _hasCallbacks = false;
     _hasCallbackFormatRow = false;
+    _hasCallbackFormatTotals = false;
 
     colWidths = [];
 
@@ -97,6 +99,7 @@ class HugeList {
     requestServerData(options) {
         this.options = options;
         this.ctlid = options.ctlid;
+        this.showTotalRow = options.showTotalRow ?? null;
 
         options.dataType = 'json';
         $('#' + this.ctlid).prepend('<div id="' + this.ctlid + '_loading" style="padding:20px;text-align:center;"> Loading...</div>');
@@ -119,6 +122,9 @@ class HugeList {
                     this._hasCallbacks = true;
                     if (this.options.callbacks.formatRow) {
                         this._hasCallbackFormatRow = true;
+                    }
+                    if (this.options.callbacks.formatTotals) {
+                        this._hasCallbackFormatTotals = true;
                     }
                 }
                 this.initCtl();
@@ -158,7 +164,7 @@ class HugeList {
             fieldCSS += this.makeCssForField(x);
             this.colWidths[x] = 0;
         }
-        th = "<thead class='prevent-select' id='" + this.ctlid + "_head'><tr>" + th + "</tr></thead><tbody id='" + this.ctlid + "_body'></tbody>";
+        th = "<thead class='prevent-select' id='" + this.ctlid + "_head'><tr>" + th + "</tr></thead><tbody id='" + this.ctlid + "_body'></tbody><tfoot></tfoot>";
 
         // Compose table (outer) + scrollbar in flex container
         let ta = `<div class='hugelist-scroll-wrapper table-responsive'>`;
@@ -249,7 +255,16 @@ class HugeList {
         //        }
 
         if (this.indexOnLoad) this._buildSearchIndex();
+
+        // Colsop
+        if (this.showTotalRow !== false) {
+            this.calculateTotalRow();
+            this.renderFooter();
+        }
+
     }
+
+
 
     // Adjust visible rows
     resize() {
@@ -768,6 +783,54 @@ class HugeList {
         this.resetScrollbar();
     }
 
+    // =====================================================================
+    //  Footer
+    // =====================================================================
+
+    renderFooter() {
+
+        if (this._hasCallbackFormatTotals) {
+            this.options.callbacks.formatTotals({ data: this.totalrow, fld: this.fld });
+        } else {
+            for (var x in this.fld) {
+                this.totalrow[x] = (this.fld[x].pic != false && typeof Picture != 'undefined') ? Picture.format(this.totalrow[x], this.fld[x].pic) : this.totalrow[x];
+            }
+        }
+        let h = '';
+        for (var x in this.totalrow) {
+            h += `<td>${this.totalrow[x]}</td>`;
+        }
+        this.ctl.find('tfoot').html(h);
+
+    }
+
+    // colops
+    calculateTotalRow() {
+        const totalrows = this.data.length;
+        this.totalrow = [];
+        for (var x in this.fld) {
+            if (this.fld[x].colops != '') {
+                switch (this.fld[x].colops.toLowerCase()) {
+                    case 'c':
+                        this.totalrow.push(totalrows);
+                        break;
+                    case 's':
+                        let total = 0;
+                        for (let row = 0; row < totalrows; row++) {
+                            total += this.data[row][x];
+                        }
+                        this.totalrow.push(total);
+                        break;
+                }
+            } else {
+                this.totalrow.push('');
+            }
+        }
+        return this.totalrow;
+    }
+
+
+
 
     // =====================================================================
     //  Sorting
@@ -965,6 +1028,11 @@ class HugeList {
             return 0;
         }
 
+        if (this.showTotalRow !== false) {
+            this.calculateTotalRow();
+            this.renderFooter();
+        }
+
         this.order();
         this.render(0);
         return this.data.length;
@@ -1017,23 +1085,37 @@ class HugeList {
 
 
     makeCssForField(idx) {
-        let colcss, ret = '';
+        let colcss = '', css1 = '';
         const align = (this.fld[idx].align == null) ? '' : this.fld[idx].align;
         switch (align.toUpperCase()) {
-            case 'H':
-                //ret += '#' + this.ctlid + ' th:nth-child(' + (idx * 1 + 1) + '){display:none} ';
-                ret = `#${this.ctlid} th:nth-child( ${1 + idx * 1} ){display:none} `;
-                break;
-            case 'L': colcss += 'text-align:left;'; break;
-            case 'R': colcss += 'text-align:right;'; break;
-            case 'C': colcss += 'text-align:center;'; break;
-            default: colcss += 'text-align:left;';
+            case 'H': css1 = 'display:none;'; break;
+            case 'L': css1 = 'text-align:left;'; break;
+            case 'R': css1 = 'text-align:right;'; break;
+            case 'C': css1 = 'text-align:center;'; break;
+            default: css1 = 'text-align:left;';
         }
-        colcss += this.fld[idx].css ?? '';
-        //const c1 = '#' + this.ctlid + ' td:nth-child(' + (idx * 1 + 1) + '){' + colcss + '}   ';
-        return `#${this.ctlid} td:nth-child( ${1 + idx * 1} ){ ${colcss} }   ${ret}`;
+        colcss = css1 + (this.fld[idx].css ?? '');
+        return `#${this.ctlid} td:nth-child( ${1 + idx * 1} ){ ${colcss} }   #${this.ctlid} th:nth-child( ${1 + idx * 1} ){ ${css1} } `;
     }
-
+    /*
+        makeCssForField(idx) {
+            let colcss = '', ret = '';
+            const align = (this.fld[idx].align == null) ? '' : this.fld[idx].align;
+            switch (align.toUpperCase()) {
+                case 'H':
+                    ret = `#${this.ctlid} th:nth-child( ${1 + idx * 1} ){display:none} `;
+                    colcss += 'display:none;';
+                    break;
+                case 'L': colcss += 'text-align:left;'; break;
+                case 'R': colcss += 'text-align:right;'; break;
+                case 'C': colcss += 'text-align:center;'; break;
+                default: colcss += 'text-align:left;';
+            }
+            colcss += this.fld[idx].css ?? '';
+            return `#${this.ctlid} td:nth-child( ${1 + idx * 1} ){ ${colcss} }   ${ret}`;
+        }
+    
+    */
     detectVisibleRows() {
         const filas = this.ctl[0].querySelectorAll('tr');
         const viewportHeight = window.innerHeight;
