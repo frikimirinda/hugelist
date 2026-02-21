@@ -788,39 +788,48 @@ class HugeList {
     // =====================================================================
 
     renderFooter() {
-
-        if (this._hasCallbackFormatTotals) {
+        // If Picture.js class exists then format each column value with its picture
+        for (var x in this.fld)
+            this.totalrow[x] = (this.fld[x].pic != false && typeof Picture != 'undefined') ? Picture.format(this.totalrow[x], this.fld[x].pic) : this.totalrow[x];
+        // Now you can format totals freely 
+        if (this._hasCallbackFormatTotals)
             this.options.callbacks.formatTotals({ data: this.totalrow, fld: this.fld });
-        } else {
-            for (var x in this.fld) {
-                this.totalrow[x] = (this.fld[x].pic != false && typeof Picture != 'undefined') ? Picture.format(this.totalrow[x], this.fld[x].pic) : this.totalrow[x];
-            }
-        }
+        // Now compose tfoot row
         let h = '';
-        for (var x in this.totalrow) {
+        for (var x in this.totalrow)
             h += `<td>${this.totalrow[x]}</td>`;
-        }
-        this.ctl.find('tfoot').html(h);
-
+        this.ctl.find('tfoot').html(`<tr>${h}</tr>`);
     }
 
-    // colops
+    // Make calcs on each column indicated on the options.colops param
+    // You can Count, Sum or Average a column
     calculateTotalRow() {
         const totalrows = this.data.length;
         this.totalrow = [];
+        let total=0;
         for (var x in this.fld) {
             if (this.fld[x].colops != '') {
                 switch (this.fld[x].colops.toLowerCase()) {
-                    case 'c':
+                    case 'c':   // count
                         this.totalrow.push(totalrows);
                         break;
-                    case 's':
-                        let total = 0;
+                    case 's':   // sum column value
+                        total = 0;
                         for (let row = 0; row < totalrows; row++) {
                             total += this.data[row][x];
                         }
                         this.totalrow.push(total);
                         break;
+                    case 'a':   // average
+                        total = 0;
+                        for (let row = 0; row < totalrows; row++) {
+                            total += this.data[row][x];
+                        }
+                        total=total/totalrows;
+                        this.totalrow.push(total);
+                        break;
+                    default:
+                        this.totalrow.push('');
                 }
             } else {
                 this.totalrow.push('');

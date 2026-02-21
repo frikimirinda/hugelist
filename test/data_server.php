@@ -39,11 +39,12 @@ $mainContainer = 'listado1';
 $brw = new mibrowser;
 
 // Make brw->fld from $a
-$a = explode(',', 'id,nombre,apellido,email,telefono,ciudad,pais,profesion,edad,saldo,fecha');
-$pic = explode(',', 'N04,,,,P###~-~###~-~###,,,,,N.10,D1');
+//                    0,  1.  ,    2.  ,  3  ,    4   ,   5  ,  6 ,   7     , 8  ,  9  ,  10
+$a   = explode(',', 'id,nombre,apellido,email,telefono,ciudad,pais,edad,profesion,saldo,fecha');
+$pic = explode(',', 'N04,,,,P###~-~###~-~###,,,N3,,N.10,D1');
 $ali = explode(',', ',,,,,,,,R,R,R');
 $css = explode(',', ',color:green');
-$ops = explode(',', 'c,,,,,,,,S'); // colops
+$ops = explode(',', 'c,,,,,,,A,,S'); // colops
 foreach ($a as $k => $v) {
     $brw->fld[] = new mibrowser_fld(
         $v, // value
@@ -235,8 +236,8 @@ function generarClienteAleatorio($id)
         $telefono,
         $ciudad,
         $pais,
-        $profesion,
         $edad,
+        $profesion,
         $saldo,
         $fecha
     ];

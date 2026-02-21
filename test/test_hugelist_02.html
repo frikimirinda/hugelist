@@ -21,6 +21,7 @@
             background: #f0f2f5;
             color: #333;
             padding: 20px;
+            overflow-y: hidden;
         }
 
         h1 {
@@ -35,11 +36,21 @@
             border-bottom: 2px solid #0f3460;
             padding-bottom: 8px;
         }
+        
+        header .logo-left{
+            width: 20%;
+        }
+        header .logo-mirinda{
+            width: 15%;
+        }
+        header h3{
+            font-size: 1.5rem;
+        }
 
         .grid {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 20px;
+            -gap: 20px;
             max-width: 1200px;
             margin: 0 auto;
         }
@@ -65,6 +76,14 @@
             color: #e74c3c;
         }
 
+        .help{
+            border: 2px solid blue;
+            padding: 5px;
+            border-radius: 15px;
+            background-color: aliceblue;
+            font-size: smaller;            
+        }
+
         @keyframes flash-naranja {
             0% {
                 background-color: orange;
@@ -82,7 +101,7 @@
         .github-corner:hover .octo-arm {
             animation: octocat-wave 560ms ease-in-out
         }
-
+       
         @keyframes octocat-wave {
 
             0%,
@@ -129,17 +148,53 @@
         </svg></a>
 
     <div class="grid" -style="max-width: 90%;">
-        <!--
+
         <header class="logos" style="display: flex; justify-content: space-between; align-items: center;">
-            <img src="assets/logo_hg.svg" style="width: 30%;">
-            <img src="assets/mirinda_es.svg" style="width: 15%;">
+            <img src="assets/logo_hg.svg" class="logo-left">
+            <h3>
+                testing hugelist.js
+                <button class="btn btn-info" onclick="$('#hlp').toggle()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16" />
+                        <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286m1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94" />
+                    </svg>
+                    help
+                </button>
+            </h3>
+            <img src="assets/mirinda_es.svg" class="logo-mirinda">
         </header>
 
 
-        <div class="samples">
-            <h3>testing hugelist.js</h3>
-        </div>
--->
+                <div class="col help" id="hlp" style="display: none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16" />
+                        <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286m1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94" />
+                    </svg>
+                    Some notes:
+                    <ul>
+                        <li>Cursor up/down: move up down on list records</li>
+                        <li>Page up/down: move to next/previos page</li>
+                        <li>Home: move to first page</li>
+                        <li>End: move to last page</li>
+                        <li>Mouse scroll to page up and down</li>
+                        <li>You can move the list columns by dragging the headers horizontally</li>
+                        <li>You can rightClick on any header to show or hide a column</li>
+                    </ul>
+                    How the search works:
+                    <ul>
+                        <li>Juan — searches for "Juan" (normal behavior)</li>
+                        <li>Juan Pedro — searches for records containing either "Juan" or "Pedro" (OR by spaces, as
+                            before)</li>
+                        <li>Juan+Madrid — searches for records containing both "Juan" and "Madrid" (AND by +)</li>
+                        <li>Juan+Madrid+Programmer — all three must be present in the record</li>
+                        <li>Each part separated by + is searched independently in the selected fields (or in all fields
+                            if none are selected).</li>
+                        <li>The + takes precedence: if there is a + in the search, AND is used between groups. If there
+                            is no +, it works as before (spaces = OR, or & at the beginning for AND).</li>
+                    </ul>
+                </div>
+
+
 
         <div id="list_container" class="rowDashboard container" -style="max-width: 100%;">
             <div class="row">
@@ -151,9 +206,6 @@
                         <select id="fld2find" class="form-control">
                         </select>
                         <button class="btn btn-primary" type="submit" id="buscar">Search</button>
-                        <!--
-                    <button class="btn btn-secondary" onclick="listado1.loadData()">Reload all data</button>
-                    -->
                     </div>
 
                 </form>
@@ -180,44 +232,9 @@
                         </select>
                         <button class="btn btn-primary" type="button" id="load"
                             onclick="listado1.loadData()">load</button>
-                        <button class="btn btn-info" onclick="$('#hlp').toggle()">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                class="bi bi-question-circle" viewBox="0 0 16 16">
-                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16" />
-                                <path
-                                    d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286m1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94" />
-                            </svg>
-                            Help</button>
                     </div>
                 </div>
             </div>
-            <div class="row">
-                <div class="col" id="hlp" style="display: none;">
-                    Some notes:
-                    <ul>
-                        <li>Cursor up/down: move up down on list records</li>
-                        <li>Page up/down: move to next/previos page</li>
-                        <li>Home: move to first page</li>
-                        <li>End: move to last page</li>
-                        <li>Mouse scroll to page up and down</li>
-                        <li>You can move the list columns by dragging the headers horizontally</li>
-                        <li>You can rightClick on any header to show or hide a column</li>
-                    </ul>
-                    How the search works:
-                    <ul>
-                        <li>Juan — searches for "Juan" (normal behavior)</li>
-                        <li>Juan Pedro — searches for records containing either "Juan" or "Pedro" (OR by spaces, as
-                            before)</li>
-                        <li>Juan+Madrid — searches for records containing both "Juan" and "Madrid" (AND by +)</li>
-                        <li>Juan+Madrid+Programmer — all three must be present in the record</li>
-                        <li>Each part separated by + is searched independently in the selected fields (or in all fields
-                            if none are selected).</li>
-                        <li>The + takes precedence: if there is a + in the search, AND is used between groups. If there
-                            is no +, it works as before (spaces = OR, or & at the beginning for AND).</li>
-                    </ul>
-                </div>
-            </div>
-
             <div id="brw" class="table-responsive" style="max-width:100%"></div>
         </div>
 
@@ -245,6 +262,13 @@
                     this.f = $('#list_container');
                     this.brw = new HugeList;
                     setTimeout($.proxy(function () { this.loadData(); }, this), 100);
+                    //this.f.find('#brw').on('click', function (){listado1.clickRow()} );
+                    let brw=document.getElementById('brw');
+                    brw.addEventListener('clickRow',$.proxy(function (){this.clickRow()} ) );
+                    brw.addEventListener('dblclickRow',$.proxy(function (){this.dblclickRow()} ) );
+                    brw.addEventListener('keydown',$.proxy(function (){ console.log('keydown') } ) );
+                    brw.addEventListener('wheel',$.proxy(function (){ console.log('wheel') } ) );
+                    brw.addEventListener('contextmenu',$.proxy(function (){ console.log('contextmenu') } ) );
                 },
                 loadData: function () {
                     let datos = {
@@ -287,7 +311,7 @@
                             }),
                         },
                         'callbacks': {
-                            '__formatRow': $.proxy(function (ret) {
+                            '_formatRow': $.proxy(function (ret) {
                                 // ret.idx is the index of the row in the original data
                                 // ret.data is a copy of the original data, so you can modify it without affecting the original data
                                 // ret.fld is the array of field names
@@ -301,11 +325,12 @@
                                     return ret.data;
                                 }
                             }),
-                            '__formatTotals': $.proxy(function (ret) {
-                                debugger;
+                            'formatTotals': $.proxy(function (ret) {
                                 console.log('formatTotals callback');
                                 console.log(ret);
-                                return ret;
+                                ret.data[4] = '';
+                                ret.data[3] = ret.data[0]+' records';
+                                ret.data[0] = '';
                             }),
                         }
                     }
