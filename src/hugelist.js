@@ -14,7 +14,8 @@
  * 
  * 
  */
-class HugeList {
+export class HugeList {
+	static version = '1.0.0';
 
     data = {};
     dataSrc = {};

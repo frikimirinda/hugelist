@@ -241,17 +241,16 @@
 
 
         <script src="https://code.jquery.com/jquery-4.0.0.min.js"></script>
-        <script src="../src/hugelist.js"></script>
+        <script _src="../src/hugelist.js"></script>
         <script type="module">
             import { Picture } from "https://cdn.jsdelivr.net/gh/frikimirinda/picture@v.1.0.0/dist/picture.min.js";
             window.Picture = Picture; 
         </script>
         <script type="module">
-            //    import { Picture } from "../src/picture.js";
-            //    window.Picture = Picture; 
+            import { HugeList } from "../src/hugelist.js";
+            window.HugeList = HugeList;
+            window.listado1.init();
         </script>
-
-
         <script type="text/javascript">
             window.listado1 = {
                 title: "TEST HUGELIST",
@@ -380,7 +379,6 @@
             window.onresize = function () {
                 listado1.brw.resize();
             }
-            window.listado1.init();
         </script>
 
 </body>
