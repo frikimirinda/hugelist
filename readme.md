@@ -1,7 +1,7 @@
 # HugeList
 
 [![GitHub Repo](https://img.shields.io/badge/GitHub-gray?logo=github)](https://github.com/frikimirinda/hugelist)
-[![GitHub Repo](https://img.shields.io/badge/npm-gray?logo=npm)](https://www.npmjs.com/package/@frikimirinda/hugelist)
+[![GitHub Repo](https://img.shields.io/badge/npm-gray?logo=npm)](https://www.npmjs.com/package/hugelist)
 
 
 
