@@ -1,432 +1,670 @@
-# HugeList - Documentacion de la clase
+# HugeList — Complete Documentation
 
-Clase JavaScript independiente para el renderizado de grandes listas tabulares (300.000+ filas) con scroll virtual, busqueda avanzada, ordenacion multi-columna, drag & drop de columnas y menu contextual de visibilidad.
+**HugeList** is a standalone JavaScript class for rendering large tabular datasets (300,000+ rows) in the browser. It uses virtual scrolling so only the visible rows are ever rendered, making it fast even with massive datasets.
 
-**Dependencias:**
-- jQuery 3.x+
-- `gobpicjs.format()` (solo si se usan pictures de formato en los campos)
-- Bootstrap Icons CSS (solo para los iconos de ordenacion en cabeceras)
+**Key features:**
 
-**No depende** del framework `mifw`. Funciona de forma completamente autonoma.
+- Virtual scroll — renders only the rows visible in the viewport
+- Advanced search with OR, AND (`+`) and AND-prefix (`&`) modes
+- Multi-column sorting (click headers, Shift/Alt for secondary columns)
+- Column drag & drop reordering
+- Column visibility context menu (right-click header)
+- Custom vertical scrollbar with touch support
+- Optional footer row with Count / Sum / Average per column
+- `formatRow` and `formatTotals` callbacks for custom rendering
+- Keyboard navigation (arrows, Page Up/Down, Home, End)
+- Zero framework dependency — only requires jQuery
 
 ---
 
-## Indice
+## Table of Contents
 
-1. [Arquitectura general](#1-arquitectura-general)
-2. [Propiedades](#2-propiedades)
-3. [Metodos publicos](#3-metodos-publicos)
+1. [Dependencies & Setup](#1-dependencies--setup)
+2. [Architecture Overview](#2-architecture-overview)
+3. [Public Properties](#3-public-properties)
+4. [Public Methods](#4-public-methods)
    - [post()](#postopt)
    - [requestServerData()](#requestserverdataopt)
+   - [resize()](#resize)
    - [render()](#renderfrom-to)
    - [updateRender()](#updaterender)
    - [order()](#order)
-   - [dataFind()](#datafindtexto-campos)
+   - [setOrderIcons()](#setordericons)
+   - [dataFind()](#datafindfind-flds)
    - [dataFindReset()](#datafindreset)
+   - [getData()](#getdataidx)
    - [moveColumn()](#movecolumnfromidx-toidx)
-4. [Eventos (callbacks)](#4-eventos-callbacks)
-5. [Formato de datos del servidor (PHP)](#5-formato-de-datos-del-servidor-php)
-6. [Busqueda avanzada](#6-busqueda-avanzada)
-7. [Ordenacion](#7-ordenacion)
-8. [Drag & Drop de columnas](#8-drag--drop-de-columnas)
-9. [Menu contextual de visibilidad](#9-menu-contextual-de-visibilidad-de-columnas)
-10. [Interaccion con teclado](#10-interaccion-con-teclado)
-11. [Ejemplo completo](#11-ejemplo-completo-paso-a-paso)
-12. [Referencia rapida de la estructura PHP](#12-referencia-rapida-de-la-estructura-php)
+   - [showCol() / hideCol()](#showcol--hidecol)
+   - [showAllCols() / hideAllCols()](#showallcols--hideallcols)
+   - [showColByField() / hideColByField()](#showcolbyfield--hidecolbyfield)
+   - [showFooter()](#showfooterflg)
+   - [calculateTotalRow()](#calculatetotalrow)
+5. [Lifecycle Events](#5-lifecycle-events)
+6. [Row Callbacks](#6-row-callbacks)
+7. [Server Data Format (PHP)](#7-server-data-format-php)
+8. [Advanced Search](#8-advanced-search)
+9. [Sorting](#9-sorting)
+10. [Column Drag & Drop](#10-column-drag--drop)
+11. [Column Visibility Context Menu](#11-column-visibility-context-menu)
+12. [Keyboard Navigation](#12-keyboard-navigation)
+13. [Footer / Totals Row](#13-footer--totals-row)
+14. [CSS Reference (hugelist.css)](#14-css-reference-hugelistcss)
+15. [Complete Example (step by step)](#15-complete-example-step-by-step)
+16. [Quick Reference — PHP structures](#16-quick-reference--php-structures)
 
 ---
 
-## 1. Arquitectura general
+## 1. Dependencies & Setup
 
-```
-+-----------+       AJAX POST         +----------+
-|           |  ------------------->   |          |
-|  HugeList |    { cmd, data }        |   PHP    |
-| (browser) |  <-------------------   | (server) |
-|           |    JSON Response        |          |
-+-----------+                         +----------+
-      |
-      v
-  +-------+     Scroll virtual: solo renderiza
-  | <table>|    las filas visibles en pantalla
-  +-------+     (ej: 30 de 300.000)
-```
+### Required
 
-**Flujo basico:**
-
-1. Se crea una instancia de `HugeList`.
-2. Se llama a `requestServerData(options)` indicando el `cmd` y el `ctlid` (id del div contenedor).
-3. El servidor responde con un JSON que contiene los datos (`data`), los campos (`fld`), estilos y configuracion.
-4. HugeList construye la tabla HTML, el CSS dinamico, la scrollbar y bindea todos los eventos.
-5. Solo se renderizan las filas visibles en el viewport. Al hacer scroll (wheel, touch, teclado, scrollbar), se re-renderizan las filas correspondientes.
-
----
-
-## 2. Propiedades
-
-| Propiedad | Tipo | Descripcion |
+| Dependency | Purpose | How to include |
 |---|---|---|
-| `data` | `Array` | Array de filas actualmente visibles (puede ser un subconjunto filtrado de `dataSrc`). Cada fila es un array de valores. |
-| `dataSrc` | `Array` | Array original completo de filas (nunca se modifica por filtros, solo por reordenacion de columnas). |
-| `dataNorm` | `Array` | Indice de busqueda pre-normalizado. Cada celda ya esta en minusculas, sin acentos y con fechas canonicas. Se construye de forma lazy. |
-| `fld` | `Array` | Array de objetos campo. Cada campo tiene: `name`, `label`, `pic`, `align`, `css`. |
-| `tableCSS` | `string` | Estilos CSS inline para la tabla (`style="..."`). |
-| `tableClass` | `string` | Clases CSS para la tabla (ej: `"table-sm table-striped table-hover"`). |
-| `orderBy` | `Array` | Indices de ordenacion (1-based). Positivo = ascendente, negativo = descendente. Ej: `[1, -3]` = ordenar por col 1 ASC, luego col 3 DESC. |
-| `events` | `Array` | Eventos de fila del servidor (ej: `{'click': 'miFuncion', 'dblclick': 'otraFuncion'}`). |
-| `fixedCols` | `number` | Numero de columnas fijas (sticky) a la izquierda. |
-| `mainContainerId` | `string` | ID del contenedor principal de la pagina. |
-| `ctlid` | `string` | ID del `<div>` que contiene la tabla. |
-| `ctl` | `jQuery` | Referencia jQuery al contenedor `#ctlid`. |
-| `options` | `Object` | Opciones pasadas a `requestServerData()`. |
-| `renderFrom` | `number` | Indice de la primera fila renderizada actualmente. |
-| `rowsToRender` | `number` | Cantidad de filas que se renderizan a la vez (calculado automaticamente segun el viewport). |
-| `renderTo` | `number` | Indice de la ultima fila renderizada actualmente. |
-| `curTR` | `jQuery` | Fila `<tr>` actualmente seleccionada. |
-| `curTRIndex` | `number` | Indice de la fila seleccionada dentro del `<tbody>` visible. |
-| `indexed` | `boolean` | `true` si el indice de busqueda (`dataNorm`) esta construido y actualizado. |
-| `_colDragIdx` | `number` | Indice de la columna que se esta arrastrando (-1 si ninguna). Uso interno. |
-| `_hiddenCols` | `Set` | Conjunto de indices de columnas ocultas. Uso interno. |
-| `colWidths` | `Array` | Anchos maximos registrados por columna (para evitar saltos de layout). |
-| `pages` | `number` | Numero total de paginas (calculado como `data.length / rowsToRender`). |
+| **jQuery 3.x +** | DOM manipulation, AJAX, event binding | `<script src="https://code.jquery.com/jquery-3.7.1.min.js">` |
+| **hugelist.js** | The HugeList class itself | `<script src="hugelist.js">` |
+| **hugelist.css** | Layout, scrollbar, sort icons, context menu | `<link rel="stylesheet" href="hugelist.css">` |
+
+### Optional but recommended
+
+| Dependency | Purpose | How to include |
+|---|---|---|
+| **Bootstrap 5 CSS** | Table styles (`table-striped`, `table-hover`, etc.) | CDN or local |
+| **Bootstrap Icons CSS** | Sort arrow icons in column headers | `@import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css")` |
+| **Picture.js** | Numeric, date and pattern formatting via `pic` field | `import { Picture } from "..."` (see example) |
+
+### Minimal HTML structure
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="hugelist.css">
+    <!-- Bootstrap CSS (optional, for table styles) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons (optional, for sort arrows) -->
+    <style>
+        @import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css");
+    </style>
+</head>
+<body>
+    <!-- HugeList renders inside this div -->
+    <div id="myList"></div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="hugelist.js"></script>
+    <script>
+        const list = new HugeList();
+        list.requestServerData({ cmd: 'getData', ctlid: 'myList' });
+    </script>
+</body>
+</html>
+```
 
 ---
 
-## 3. Metodos publicos
+## 2. Architecture Overview
+
+```
++-----------+        AJAX POST          +----------+
+|           |  ─────────────────────>   |          |
+|  HugeList |   { cmd, data, token }    |  Server  |
+| (browser) |  <─────────────────────   |  (PHP)   |
+|           |      JSON Response        |          |
++-----------+                           +----------+
+      │
+      ▼
+  Virtual scroll
+  ┌─────────────┐   Only renders the rows that fit
+  │   <table>   │   in the current viewport.
+  │  (visible)  │   e.g. 25 rows out of 300,000.
+  └─────────────┘   On scroll, rows are re-rendered.
+```
+
+**Basic flow:**
+
+1. Create a `HugeList` instance.
+2. Call `requestServerData(options)` specifying the server URL, command, and the `ctlid` (the `id` of the container `<div>`).
+3. A loading indicator appears inside the container while the AJAX request is in flight.
+4. The server returns a JSON response with: `data` (row arrays), `fld` (field definitions), table classes/CSS, sort order and row events.
+5. `initCtl()` builds the `<table>` HTML, injects dynamic `<style>` tags, auto-detects how many rows fit in the viewport, binds all events and renders the first page.
+6. From that point on, scrolling (wheel, touch, keyboard, scrollbar) calls `render()` to swap the visible rows without touching the DOM outside the `<tbody>`.
+
+---
+
+## 3. Public Properties
+
+These properties are safe to read and, in some cases, set externally.
+
+| Property | Type | Description |
+|---|---|---|
+| `data` | `Array` | The currently active dataset. When a filter is active this is a subset of `dataSrc`. Each element is an array of cell values (positional, matching the order of `fld`). |
+| `dataSrc` | `Array` | The full original dataset as received from the server. Never modified by filters — only reordered in-place when columns are dragged. |
+| `dataNorm` | `Array` | Pre-normalised search index (lowercase, no accents, canonical dates). Built lazily on the first `dataFind()` call and invalidated after `moveColumn()`. |
+| `fld` | `Array` | Array of field-definition objects. Each has: `name`, `label`, `pic`, `align`, `css`, `colops`. |
+| `tableCSS` | `string` | Inline CSS string applied to the `<table>` element. |
+| `tableClass` | `string` | Space-separated CSS class string applied to `<table>` (e.g. `"table-sm table-striped table-hover"`). |
+| `orderBy` | `Array` | 1-based column indices. Positive = ascending, negative = descending. Example: `[1, -3]` means sort col 1 ASC then col 3 DESC. |
+| `events` | `Object` | Row event handlers sent from the server (e.g. `{ click: 'myApp.onClick', dblclick: 'myApp.onDblClick' }`). Evaluated with `eval()`. |
+| `fixedCols` | `number` | Number of sticky columns frozen at the left edge. |
+| `mainContainerId` | `string` | ID of the outermost application container (used by row event callbacks). |
+| `ctlid` | `string` | ID of the `<div>` that hosts the table. |
+| `ctl` | `jQuery` | jQuery reference to `#ctlid`. |
+| `options` | `Object` | Options object passed to the last `requestServerData()` call. |
+| `showTotalRow` | `boolean\|null` | Controls footer visibility. `null` = auto (render if colops present), `false` = never, `true` = always. |
+| `renderFrom` | `number` | Index of the first currently rendered row. |
+| `rowsToRender` | `number` | Number of rows rendered per page (auto-calculated from viewport height). |
+| `renderTo` | `number` | Index of the last currently rendered row. |
+| `curTR` | `jQuery` | The currently selected `<tr>`. |
+| `curTRIndex` | `number` | Index of the selected row inside the visible `<tbody>`. |
+| `indexed` | `boolean` | `true` when the search index (`dataNorm`) is built and valid. |
+| `indexOnLoad` | `boolean` | Set to `true` to build the search index immediately after loading (instead of lazily on first search). |
+| `colWidths` | `Array` | Maximum recorded width per column, used to prevent layout shifts when paging. |
+| `pages` | `number` | Total number of virtual pages (`data.length / rowsToRender`). |
+
+---
+
+## 4. Public Methods
 
 ### `post(opt)`
 
-Realiza una peticion POST AJAX de forma independiente.
+Performs a standalone POST AJAX request (no framework required). Used internally by `requestServerData()` but can also be called directly.
 
-**Parametros (`opt`):**
+**Parameters:**
 
-| Parametro | Tipo | Obligatorio | Descripcion |
+| Key | Type | Required | Description |
 |---|---|---|---|
-| `cmd` | `string` | Si | Nombre del comando que se envia al servidor (se mapea a `cmd_XXXX` en PHP). |
-| `url` | `string` | No | URL destino. Por defecto usa la variable global `CONTEXT` o cadena vacia. |
-| `data` | `Object` | No | Datos adicionales a enviar en el POST. |
-| `dataType` | `string` | No | Tipo de respuesta (`'json'`, `'html'`...). Por defecto `'json'`. |
-| `callBackDone` | `Function` | No | Funcion a ejecutar si la peticion es exitosa. Recibe la respuesta como argumento. |
-| `callBackFail` | `Function` | No | Funcion a ejecutar si la peticion falla. Recibe el jqXHR como argumento. |
+| `cmd` | `string` | Yes | Command name sent to the server. |
+| `url` | `string` | No | Target URL. Defaults to the global `CONTEXT` variable if defined, otherwise empty string. |
+| `data` | `Object` | No | Extra data to include in the POST body. |
+| `dataType` | `string` | No | Expected response type (`'json'`, `'html'`, …). Defaults to `'json'`. |
+| `callBackDone` | `Function` | No | Called on success with the parsed response. |
+| `callBackFail` | `Function` | No | Called on failure with the `jqXHR` object. |
 
-**Ejemplo:**
+The POST body always includes `{ cmd, data, token }` where `token` is read from `localStorage`.
+
+**Example:**
 
 ```javascript
 const hl = new HugeList();
 
 hl.post({
-    cmd:  'getDatos',
-    url:  '/api/clientes',
-    data: { filtro: 'activos' },
+    cmd: 'getReport',
+    url: '/api/reports',
+    data: { year: 2024 },
     callBackDone: function(ret) {
-        console.log('Recibidos:', ret);
+        console.log('Response:', ret);
     },
     callBackFail: function(xhr) {
-        console.error('Error:', xhr.status);
+        console.error('HTTP error:', xhr.status);
     }
 });
-```
-
-**Nota:** El POST envia automaticamente un `token` de `localStorage` para autenticacion:
-```
-POST data: { cmd: 'getDatos', data: { filtro: 'activos' }, token: '...' }
 ```
 
 ---
 
 ### `requestServerData(opt)`
 
-Metodo principal para cargar datos. Combina la peticion AJAX con la inicializacion del control.
+The main entry point. Sends the AJAX request, receives the server JSON, and initialises the table control.
 
-**Parametros (`opt`):**
+**Parameters:**
 
-| Parametro | Tipo | Obligatorio | Descripcion |
+| Key | Type | Required | Description |
 |---|---|---|---|
-| `cmd` | `string` | Si | Comando del servidor (ej: `'getDatos'`). |
-| `ctlid` | `string` | Si | ID del `<div>` HTML que contendra la tabla. |
-| `url` | `string` | No | URL destino. |
-| `data` | `Object` | No | Datos adicionales a enviar. |
-| `events` | `Object` | No | Callbacks del ciclo de vida (ver seccion [Eventos](#4-eventos-callbacks)). |
+| `cmd` | `string` | Yes | Server command (e.g. `'getData'`). |
+| `ctlid` | `string` | Yes | `id` attribute of the container `<div>` where the table will be rendered. |
+| `url` | `string` | No | Server URL. |
+| `data` | `Object` | No | Additional POST data sent to the server. |
+| `showTotalRow` | `boolean` | No | Override the footer behaviour: `false` disables it, `true` always shows it. |
+| `events` | `Object` | No | Lifecycle event callbacks (see [Section 5](#5-lifecycle-events)). |
+| `callbacks` | `Object` | No | Row-level rendering callbacks (see [Section 6](#6-row-callbacks)). |
 
-**Ejemplo:**
-
-```javascript
-const brw = new HugeList();
-
-brw.requestServerData({
-    cmd:   'getDatos',
-    ctlid: 'miTabla',
-    data:  { tipo: 'premium' },
-    events: {
-        beforeInit: function(ret) {
-            console.log('Datos recibidos, a punto de inicializar');
-        },
-        afterInit: function(ret) {
-            console.log('Tabla lista. Filas:', brw.data.length);
-        },
-        startIndexing: function() {
-            console.time('Indexando');
-        },
-        endIndexing: function() {
-            console.timeEnd('Indexando');
-        },
-        notOK: function(ret) {
-            alert('Error: el servidor respondio ok=false');
-        }
-    }
-});
-```
-
-**Respuesta esperada del servidor:**
+**Expected server JSON structure:**
 
 ```json
 {
     "ok": true,
     "data": {
-        "data": [ [1,"Juan","Garcia",...], [2,"Ana","Lopez",...], ... ],
-        "fld": [
-            {"name":"id",     "label":"ID",     "pic":"N04", "align":"R", "css":""},
-            {"name":"nombre", "label":"Nombre", "pic":"",    "align":"L", "css":"color:green"},
-            ...
+        "data": [
+            [1, "Alice", "Smith", "alice@example.com", 612345678, "London", "UK", 34, "Engineer", 4500, "1990-03-15"],
+            [2, "Bob",   "Jones", "bob@example.com",   698765432, "Paris",  "FR", 28, "Designer", 3200, "1996-07-22"]
         ],
-        "tableCSS": "white-space:nowrap; cursor:default;",
-        "tableClass": ["table-sm","table-striped","table-hover"],
+        "fld": [
+            { "name": "id",         "label": "ID",         "pic": "N04",            "align": "R", "css": "",             "colops": "c" },
+            { "name": "name",       "label": "Name",       "pic": "",               "align": "L", "css": "color:green",  "colops": "" },
+            { "name": "surname",    "label": "Surname",    "pic": "",               "align": "L", "css": "",             "colops": "" },
+            { "name": "email",      "label": "Email",      "pic": "",               "align": "L", "css": "",             "colops": "" },
+            { "name": "phone",      "label": "Phone",      "pic": "P###~-~###~-~###","align": "L","css": "",             "colops": "" },
+            { "name": "city",       "label": "City",       "pic": "",               "align": "L", "css": "",             "colops": "" },
+            { "name": "country",    "label": "Country",    "pic": "",               "align": "L", "css": "",             "colops": "" },
+            { "name": "age",        "label": "Age",        "pic": "",               "align": "R", "css": "",             "colops": "a" },
+            { "name": "profession", "label": "Profession", "pic": "",               "align": "L", "css": "",             "colops": "" },
+            { "name": "balance",    "label": "Balance",    "pic": "N.10",           "align": "R", "css": "",             "colops": "s" },
+            { "name": "date",       "label": "Date",       "pic": "D1",             "align": "R", "css": "",             "colops": "" }
+        ],
+        "tableCSS": "white-space: nowrap; cursor: default;",
+        "tableClass": ["table-sm", "table-striped", "table-hover"],
         "orderBy": [1],
-        "events": {"click":"miApp.clickRow", "dblclick":"miApp.dblclickRow"},
+        "events": {
+            "click":    "myApp.clickRow",
+            "dblclick": "myApp.dblClickRow"
+        },
         "fixedCols": 1,
-        "mainContainerId": "miApp"
+        "mainContainerId": "myApp"
     }
 }
+```
+
+**Example:**
+
+```javascript
+const brw = new HugeList();
+
+brw.requestServerData({
+    cmd:   'getData',
+    ctlid: 'myTable',
+    url:   '/api/data',
+    data:  { filter: 'active' },
+    events: {
+        beforeInit(ret) {
+            // ret.data.data arrives as a JSON string when the payload is huge;
+            // parse it here if needed.
+            if (typeof ret.data.data === 'string') {
+                ret.data.data = JSON.parse(ret.data.data);
+            }
+        },
+        afterInit() {
+            console.log('Table ready. Rows:', brw.data.length);
+        },
+        notOK(ret) {
+            alert('Server returned ok=false');
+        }
+    }
+});
+```
+
+> **Tip — large payloads:** When the dataset is very large (100,000+ rows), the server can send `data` as a raw JSON string. Parse it inside `beforeInit` to avoid double-serialisation overhead:
+> ```javascript
+> beforeInit(ret) {
+>     ret.data.data = JSON.parse(ret.data.data);
+> }
+> ```
+
+---
+
+### `resize()`
+
+Recalculates how many rows fit in the viewport and re-renders. Call this inside a `window.onresize` handler.
+
+```javascript
+window.onresize = function() {
+    brw.resize();
+};
 ```
 
 ---
 
 ### `render(from, to)`
 
-Renderiza un rango de filas en el `<tbody>`.
+Renders a range of rows into the `<tbody>`. All scroll, keyboard and touch interactions call this internally.
 
-| Argumento | Descripcion |
+| Call | Behaviour |
 |---|---|
-| Sin argumentos | Avanza una pagina (siguiente bloque). |
-| `render(-1)` | Retrocede una pagina (bloque anterior). |
-| `render(0)` | Vuelve al inicio. |
-| `render(from)` | Renderiza desde la fila `from`, `rowsToRender` filas. |
-| `render(from, to)` | Renderiza el rango exacto `[from, to)`. |
-
-**Ejemplo:**
+| `render()` | Advance one page (next block of rows). |
+| `render(-1)` | Go back one page (previous block). |
+| `render(0)` | Jump to the first row. |
+| `render(n)` | Jump to row `n` and render `rowsToRender` rows. |
+| `render(from, to)` | Render the exact range `[from, to)`. |
 
 ```javascript
-brw.render(0);          // Volver al principio
-brw.render(-1);         // Pagina anterior
-brw.render();           // Pagina siguiente
-brw.render(500);        // Saltar a la fila 500
-brw.render(100, 150);   // Mostrar filas 100 a 149
+brw.render(0);        // Back to top
+brw.render(-1);       // Previous page
+brw.render();         // Next page
+brw.render(500);      // Jump to row 500
+brw.render(100, 150); // Rows 100–149
 ```
+
+After rendering, `checkUnfavorableColWidths()` ensures columns do not shrink between pages, `_updateFixedColOffsets()` recalculates sticky column positions, and `resetScrollbar()` repositions the scrollbar thumb.
 
 ---
 
 ### `updateRender()`
 
-Recalcula cuantas filas caben en el viewport y re-renderiza. Util despues de cambiar el tamanio de la ventana.
+Redetects how many rows fit in the viewport, then re-renders. Also rechecks column widths and fixed column offsets. Useful after DOM changes that alter the table's available height.
 
 ```javascript
-$(window).on('resize', function() {
-    brw.updateRender();
-});
+$(window).on('resize', () => brw.updateRender());
 ```
 
 ---
 
 ### `order()`
 
-Ordena `this.data` segun el array `this.orderBy`. Se ejecuta automaticamente al hacer click en cabeceras y tras busquedas.
+Sorts `this.data` in-place according to `this.orderBy`. Called automatically when clicking headers. Can be called programmatically after changing `orderBy`.
 
 ```javascript
-// Ordenar por columna 2 descendente, luego columna 5 ascendente
+// Sort by column 2 descending, then column 5 ascending
 brw.orderBy = [-2, 5];
 brw.order();
 brw.render(0);
+brw.setOrderIcons(); // update the header arrows
 ```
 
 ---
 
-### `dataFind(texto, campos)`
+### `setOrderIcons()`
 
-Busca en los datos y filtra los resultados. Devuelve el numero de coincidencias.
+Updates the sort-direction icons (▲ ▼) in the column headers to reflect the current `orderBy` state. Called automatically by `clickHeader()` and `order()`; call manually after programmatic sort changes.
 
-| Argumento | Tipo | Descripcion |
+---
+
+### `dataFind(find, flds)`
+
+Filters `this.data` to rows that match the search term, re-renders from row 0, and returns the match count. Does not modify `dataSrc`.
+
+| Parameter | Type | Description |
 |---|---|---|
-| `texto` | `string` | Termino de busqueda (ver seccion [Busqueda avanzada](#6-busqueda-avanzada)). |
-| `campos` | `string` o `Array` | Nombre(s) de campo donde buscar. Si es cadena vacia o no coincide, busca en todos. |
+| `find` | `string` | Search term. See [Section 8](#8-advanced-search) for syntax. |
+| `flds` | `string` or `Array` | Field `name`(s) to search in. Empty string or non-matching names → search all fields. |
 
-**Retorno:** `number` - cantidad de registros encontrados (0 si no hay coincidencias).
+**Returns:** `number` — number of matching rows (0 if none found).
 
-**Ejemplo:**
+If the search index has not been built yet (`indexed === false`), it is built automatically before searching.
 
 ```javascript
-// Buscar "Juan" en todos los campos
-const n = brw.dataFind('Juan', '');
-console.log(n + ' registros encontrados');
+// Search for "Alice" across all fields
+let n = brw.dataFind('Alice', '');
+console.log(n + ' records found');
 
-// Buscar "Madrid" solo en el campo "ciudad"
-brw.dataFind('Madrid', 'ciudad');
+// Search only in the "city" field
+brw.dataFind('London', 'city');
 
-// Buscar "Madrid" en "ciudad" o "pais"
-brw.dataFind('Madrid', ['ciudad', 'pais']);
+// Search in multiple specific fields
+brw.dataFind('London', ['city', 'country']);
 
-// Buscar registros que contengan "Juan" Y "Madrid" (modo AND)
-brw.dataFind('Juan+Madrid', '');
+// AND mode: rows containing "Alice" AND "London"
+brw.dataFind('Alice+London', '');
 
-// Buscar "Juan" O "Pedro" (modo OR, espacios)
-brw.dataFind('Juan Pedro', '');
+// OR mode: rows containing "Alice" OR "Bob"
+brw.dataFind('Alice Bob', '');
+
+// Reset after search
+brw.dataFindReset();
 ```
 
 ---
 
 ### `dataFindReset()`
 
-Restaura todos los datos originales (elimina el filtro). Devuelve el total de registros.
+Restores `this.data` to the full original dataset, applies the current sort, re-renders from row 0, and returns the total row count.
 
 ```javascript
 const total = brw.dataFindReset();
-console.log('Mostrando los ' + total + ' registros');
+console.log('Showing all', total, 'records');
+```
+
+---
+
+### `getData(idx)`
+
+Returns the data row at index `idx` in the currently active (possibly filtered) dataset.
+
+```javascript
+const row = brw.getData(0); // First visible row
+console.log(row[1]); // Second cell value
 ```
 
 ---
 
 ### `moveColumn(fromIdx, toIdx)`
 
-Mueve una columna de una posicion a otra. Reordena campos, datos, indices de ordenacion y columnas ocultas.
+Moves a column from one position to another. Reorders:
+- `fld` array
+- `colWidths` array
+- `orderBy` indices (remapped)
+- All rows in `dataSrc` (and therefore `data`) in-place
+- `_hiddenCols` set (indices remapped)
 
-| Argumento | Tipo | Descripcion |
+The search index is invalidated; it will be rebuilt lazily on the next search.
+
+| Parameter | Type | Description |
 |---|---|---|
-| `fromIdx` | `number` | Indice 0-based de la columna origen. |
-| `toIdx` | `number` | Indice 0-based de la posicion destino. |
+| `fromIdx` | `number` | 0-based index of the source column. |
+| `toIdx` | `number` | 0-based index of the destination position. |
 
 ```javascript
-// Mover la columna 0 ("ID") a la posicion 3
+// Move the "ID" column (position 0) to position 3
 brw.moveColumn(0, 3);
 ```
 
-**Nota:** Este metodo se ejecuta automaticamente al arrastrar columnas con el raton. Tambien puede invocarse programaticamente.
+Called automatically by the drag & drop handlers; can also be called programmatically.
 
 ---
 
-## 4. Eventos (callbacks)
+### `showCol` / `hideCol`
 
-Los eventos se pasan dentro del objeto `options.events` al llamar a `requestServerData()`.
+Show or hide a column by its 1-based index (as visible in the DOM, not the `fld` array).
 
-| Evento | Cuando se dispara | Argumento |
+```javascript
+brw.showCol(2);     // Show column 2
+brw.hideCol(2);     // Hide column 2
+brw.showCol(2, false); // Also hides column 2
+```
+
+---
+
+### `showAllCols` / `hideAllCols`
+
+Show or hide every column at once.
+
+```javascript
+brw.hideAllCols();  // Hide everything
+brw.showAllCols();  // Restore all
+```
+
+---
+
+### `showColByField` / `hideColByField`
+
+Show or hide a column by its field `name` (as defined in `fld`).
+
+```javascript
+brw.hideColByField('email');
+brw.showColByField('email');
+```
+
+---
+
+### `showFooter(flg)`
+
+Toggle the `<tfoot>` visibility.
+
+```javascript
+brw.showFooter(true);  // Show footer
+brw.showFooter(false); // Hide footer
+```
+
+---
+
+### `calculateTotalRow()`
+
+Recalculates the totals for each column based on `this.fld[x].colops` and the current `this.data`. Returns `this.totalrow`.
+
+Operations (`colops` value):
+
+| Value | Operation |
+|---|---|
+| `'c'` | Count — number of rows |
+| `'s'` | Sum — sum of the column values |
+| `'a'` | Average — arithmetic mean of the column values |
+| `''` or anything else | Empty cell |
+
+Called automatically after `dataFind()` and `dataFindReset()` when `showTotalRow !== false`.
+
+---
+
+## 5. Lifecycle Events
+
+Events are passed in `options.events` to `requestServerData()`.
+
+| Event | When it fires | Argument |
 |---|---|---|
-| `beforeInit` | Despues de recibir datos, antes de construir la tabla. | `ret` (respuesta del servidor) |
-| `afterInit` | Despues de construir la tabla y bindear eventos. | `ret` (respuesta del servidor) |
-| `startIndexing` | Justo antes de comenzar a construir el indice de busqueda (`dataNorm`). | Ninguno |
-| `endIndexing` | Justo despues de terminar de construir el indice de busqueda. | Ninguno |
-| `notOK` | Cuando el servidor responde con `ok: false`. | `ret` (respuesta del servidor) |
+| `beforeInit(ret)` | After AJAX success, **before** the table DOM is built. You can mutate `ret.data` here (e.g. parse `data` from a JSON string). | Server response object |
+| `afterInit(ret)` | After the table is fully built and all events are bound. Good place to populate search-field selectors or show row counts. | Server response object |
+| `startIndexing()` | Just before the search index starts building. | — |
+| `endIndexing()` | Just after the search index finishes building. | — |
+| `notOK(ret)` | When the server responds with `ok: false`. | Server response object |
 
-**Ejemplo completo de eventos:**
+**Example:**
 
 ```javascript
 brw.requestServerData({
-    cmd:   'getDatos',
+    cmd:   'getData',
     ctlid: 'brw',
     events: {
-        beforeInit: function(ret) {
-            // Se puede modificar ret.data antes de inicializar
-            console.log('Campos:', ret.data.fld.length);
+        beforeInit(ret) {
+            // Parse data if server sent it as a JSON string
+            if (typeof ret.data.data === 'string') {
+                ret.data.data = JSON.parse(ret.data.data);
+            }
         },
-        afterInit: function(ret) {
-            // La tabla ya esta construida
-            // Buen momento para rellenar selectores, mostrar contadores, etc.
-            $('#info').text(brw.data.length + ' registros');
+        afterInit() {
+            // Populate a field selector for the search bar
+            const $sel = $('#fieldSelect');
+            $sel.html('<option value="">All fields</option>');
+            for (const [, fld] of brw.fld.entries()) {
+                $sel.append(`<option value="${fld.name}">${fld.label}</option>`);
+            }
+            $('#rowCount').text(`${brw.data.length.toLocaleString()} records loaded`);
         },
-        startIndexing: function() {
-            $('#status').text('Indexando datos...');
-            console.time('Indexacion');
+        startIndexing() {
+            console.time('Indexing');
         },
-        endIndexing: function() {
-            $('#status').text('Listo');
-            console.timeEnd('Indexacion');
+        endIndexing() {
+            console.timeEnd('Indexing');
         },
-        notOK: function(ret) {
-            alert('El servidor respondio con error');
-            console.error(ret);
+        notOK(ret) {
+            console.error('Server error:', ret);
+            alert('Could not load data.');
         }
     }
 });
 ```
 
-### Eventos de fila (click / dblclick)
+---
 
-Los eventos de fila se definen en el **servidor** (PHP) y se evaluan con `eval()`.
+## 6. Row Callbacks
 
-```php
-$brw->events['click']    = 'miApp.clickRow';
-$brw->events['dblclick'] = 'miApp.dblclickRow';
-```
+Row callbacks are passed in `options.callbacks` to `requestServerData()`.
 
-En el lado JavaScript, las funciones reciben el array de datos de la fila:
+### `formatRow(params)`
+
+Called for **every rendered row**, every time `render()` is called. Lets you transform cell values before they are written to the DOM.
+
+| Property | Description |
+|---|---|
+| `params.idx` | Index of the row in the current `data` array. |
+| `params.data` | A **deep clone** of the row array. Modify freely — it won't affect the original data. |
+| `params.fld` | The `fld` array (field definitions). |
+| `params.realdata` | Reference to the **original** row in `data`. Modify only if you intentionally want to mutate the source. |
+
+Return the modified `params.data` (or `params.realdata`) array to use it for rendering.
 
 ```javascript
-window.miApp = {
-    clickRow: function(rowData) {
-        // rowData = [1, "Juan", "Garcia", "juan.garcia@...", ...]
-        console.log('ID:', rowData[0], 'Nombre:', rowData[1]);
-    },
-    dblclickRow: function(rowData) {
-        alert('Doble click en: ' + rowData[1] + ' ' + rowData[2]);
+callbacks: {
+    formatRow(params) {
+        // Append a star to every name
+        params.data[1] = params.data[1] + ' ★';
+        // Mark negative balances in red
+        if (params.data[9] < 0) {
+            params.data[9] = '<span style="color:red">' + params.data[9] + '</span>';
+        }
+        return params.data;
     }
-};
+}
+```
+
+> **Performance note:** `formatRow` is called on every render pass. Keep it lightweight — avoid heavy DOM operations or synchronous network calls.
+
+### `formatTotals(params)`
+
+Called once after `calculateTotalRow()`, before the footer is rendered. Lets you post-process the totals array.
+
+| Property | Description |
+|---|---|
+| `params.data` | The `totalrow` array (one entry per column). Modify in place. |
+| `params.fld` | The `fld` array. |
+
+```javascript
+callbacks: {
+    formatTotals(params) {
+        // Replace the raw count with a label
+        params.data[0] = params.data[0] + ' records';
+        // Clear the average column (we don't want it displayed)
+        params.data[7] = '';
+    }
+}
 ```
 
 ---
 
-## 5. Formato de datos del servidor (PHP)
+## 7. Server Data Format (PHP)
 
-### Clases necesarias en PHP
+HugeList expects a JSON response with a specific structure. Below are the PHP helper classes used in `data_server.php` — you can adapt them to any server-side language.
+
+### `mibrowser_fld` — Field definition
+
+```php
+class mibrowser_fld {
+    public $name;    // Internal field name (used for field-scoped searches)
+    public $label;   // Column header text
+    public $pic;     // Format picture (empty = raw value)
+    public $align;   // 'L' left | 'R' right | 'C' center | 'H' hidden
+    public $css;     // Extra CSS applied to every <td> in this column
+    public $colops;  // Footer operation: 'c' count | 's' sum | 'a' average | '' none
+
+    public function __construct(
+        $name, $label = '', $picture = '', $align = '', $css = '', $colops = ''
+    ) {
+        $this->name   = $name;
+        $this->label  = $label;
+        $this->pic    = $picture;
+        $this->align  = $align;
+        $this->css    = $css;
+        $this->colops = $colops;
+    }
+}
+```
+
+### `mibrowser` — Table configuration
 
 ```php
 class mibrowser {
-    public array  $data = [];           // Array de filas (cada fila es un array de valores)
-    public array  $fld = [];            // Array de mibrowser_fld
-    public string $tableCSS = '';       // CSS inline para <table>
-    public array  $tableClass = [];     // Clases CSS para <table>
-    public array  $orderBy = [];        // Indices de ordenacion (1-based)
-    public array  $events = [];         // Eventos de fila ('click' => 'funcion')
-    public int    $fixedCols = 0;       // Columnas fijas (sticky)
-    public string $mainContainerId = '';
+    public $data          = [];   // Array of row-arrays (or a JSON string for large sets)
+    public array $fld     = [];   // Array of mibrowser_fld
+    public string $tableCSS   = '';   // Inline style for <table>
+    public array $tableClass  = [];   // CSS classes for <table>
+    public array $orderBy     = [];   // 1-based sort indices
+    public array $events      = [];   // Row events: ['click' => 'fn', 'dblclick' => 'fn']
+    public int $fixedCols     = 0;    // Number of left-sticky columns
+    public string $mainContainerId = ''; // ID of the top-level app container
 }
+```
 
-class mibrowser_fld {
-    public $name;    // Nombre interno del campo (ej: 'nombre')
-    public $label;   // Etiqueta visible (ej: 'Nombre')
-    public $pic;     // Picture de formato (ej: 'N04', 'D1', 'P###-###')
-    public $align;   // Alineacion: 'L' (izquierda), 'R' (derecha), 'C' (centro)
-    public $css;     // CSS adicional para la columna
+### `Response` — Response envelope
 
-    public function __construct($name, $label = '', $picture = '', $align = '', $css = '') {
-        $this->name  = $name;
-        $this->label = $label;
-        $this->pic   = $picture;
-        $this->align = $align;
-        $this->css   = $css;
-    }
-}
-
+```php
 class Response {
     public bool $ok   = true;
-    public $html = '';
-    public $css  = '';
-    public $js   = '';
-    public $data = '';
+    public $data      = '';    // The mibrowser object (or anything else)
+    public $html      = '';
+    public $css       = '';
+    public $js        = '';
+    public $fld       = [];
 
     public function __construct($op) {
-        if (is_array($op)) {
-            foreach ($op as $k => $v) {
-                if (isset($this->$k))
-                    $this->$k = $v;
-            }
-        }
+        if (is_array($op))
+            foreach ($op as $k => $v)
+                if (isset($this->$k)) $this->$k = $v;
     }
 
     public function send() {
@@ -437,440 +675,919 @@ class Response {
 }
 ```
 
-### Definicion de campos (fld)
-
-Cada campo se define con `mibrowser_fld`:
+### Defining fields
 
 ```php
 $brw = new mibrowser;
 
-$brw->fld[] = new mibrowser_fld('id',       'ID',        'N04', 'R', '');
-$brw->fld[] = new mibrowser_fld('nombre',   'Nombre',    '',    'L', 'color:green');
-$brw->fld[] = new mibrowser_fld('email',    'Email',     '',    'L', '');
-$brw->fld[] = new mibrowser_fld('telefono', 'Telefono',  'P###-###-###', 'L', '');
-$brw->fld[] = new mibrowser_fld('saldo',    'Saldo',     'N.10', 'R', '');
-$brw->fld[] = new mibrowser_fld('fecha',    'F. Alta',   'D1',   'R', '');
+// mibrowser_fld($name, $label, $pic, $align, $css, $colops)
+$brw->fld[] = new mibrowser_fld('id',        'ID',         'N04',             'R', '',             'c');
+$brw->fld[] = new mibrowser_fld('name',      'Name',       '',                'L', 'color:green',  '');
+$brw->fld[] = new mibrowser_fld('surname',   'Surname',    '',                'L', '',             '');
+$brw->fld[] = new mibrowser_fld('email',     'Email',      '',                'L', '',             '');
+$brw->fld[] = new mibrowser_fld('phone',     'Phone',      'P###~-~###~-~###','L', '',             '');
+$brw->fld[] = new mibrowser_fld('city',      'City',       '',                'L', '',             '');
+$brw->fld[] = new mibrowser_fld('country',   'Country',    '',                'L', '',             '');
+$brw->fld[] = new mibrowser_fld('age',       'Age',        '',                'R', '',             'a');
+$brw->fld[] = new mibrowser_fld('profession','Profession', '',                'L', '',             '');
+$brw->fld[] = new mibrowser_fld('balance',   'Balance',    'N.10',            'R', '',             's');
+$brw->fld[] = new mibrowser_fld('date',      'Date',       'D1',              'R', '',             '');
 ```
 
-### Pictures de formato (`pic`)
+### Picture format codes (`pic`)
 
-Las pictures se procesan via `gobpicjs.format()` en el frontend:
+Picture codes are processed by **Picture.js** on the client. If Picture.js is not loaded, the raw value is used.
 
-| Picture | Descripcion | Entrada | Salida |
+| Code | Description | Input | Output |
 |---|---|---|---|
-| `N04` | Numerico con relleno de ceros (4 digitos) | `7` | `0007` |
-| `N.10` | Numerico con punto de miles (10 posiciones) | `1500` | `1.500` |
-| `D1` | Fecha formato DD/MM/YYYY | `2024-03-15` | `15/03/2024` |
-| `P###-###-###` | Pattern (cada `#` es un digito) | `612345678` | `612-345-678` |
-| `P###~-~###~-~###` | Pattern con separador `~` (se elimina el `~`) | `612345678` | `612-345-678` |
-| `false` o vacio | Sin formato, valor tal cual | `Juan` | `Juan` |
+| `N04` | Numeric, zero-padded to 4 digits | `7` | `0007` |
+| `N.10` | Numeric with thousands separator (`.`), 10 chars | `1500` | `1.500` |
+| `D1` | Date formatted as `DD/MM/YYYY` | `2024-03-15` | `15/03/2024` |
+| `P###-###-###` | Pattern — each `#` is one digit | `612345678` | `612-345-678` |
+| `P###~-~###~-~###` | Pattern with `~` literal separator (tilde is stripped) | `612345678` | `612-345-678` |
+| `''` or `false` | No formatting, raw value | `Alice` | `Alice` |
 
-### Datos (data)
+### Alignment codes (`align`)
 
-Los datos son un array de arrays. Cada fila es un array posicional que corresponde al orden de `fld`:
+| Code | Effect |
+|---|---|
+| `L` | `text-align: left` |
+| `R` | `text-align: right` |
+| `C` | `text-align: center` |
+| `H` | `display: none` (column hidden by default) |
+| (empty) | Defaults to `text-align: left` |
+
+### Column operations (`colops`)
+
+| Code | Footer value |
+|---|---|
+| `c` | Total row count |
+| `s` | Sum of all values in this column |
+| `a` | Arithmetic mean of all values in this column |
+| `''` | Empty cell |
+
+### Row data format
+
+Data is an array of positional arrays. The order **must** match the order of `fld`.
 
 ```php
-$brw->data[] = [1, 'Juan',  'Garcia',  'juan.garcia@mail.com',  612345678, 'Madrid',   'Espana', 'Ingeniero', 35, 1500, '1989-05-23'];
-$brw->data[] = [2, 'Maria', 'Lopez',   'maria.lopez@mail.com',  698765432, 'Barcelona','Espana', 'Medico',    42, 2300, '1982-11-07'];
+$brw->data[] = [1, 'Alice', 'Smith',  'alice@example.com',  612345678, 'London', 'UK', 34, 'Engineer', 4500.00, '1990-03-15'];
+$brw->data[] = [2, 'Bob',   'Jones',  'bob@example.com',    698765432, 'Paris',  'FR', 28, 'Designer', 3200.00, '1996-07-22'];
 ```
 
-### Envio de respuesta
+### Row events
+
+Defined in PHP, evaluated with `eval()` on the client:
 
 ```php
-$response = new Response([
-    'ok'   => true,
-    'data' => $brw
-]);
+$brw->events['click']    = 'myApp.clickRow';
+$brw->events['dblclick'] = 'myApp.dblClickRow';
+```
+
+The corresponding JavaScript functions receive the row data array and the row index:
+
+```javascript
+window.myApp = {
+    clickRow(rowData, idx) {
+        console.log('Clicked row', idx, '— ID:', rowData[0], 'Name:', rowData[1]);
+    },
+    dblClickRow(rowData, idx) {
+        alert('Open detail for: ' + rowData[1] + ' ' + rowData[2]);
+    }
+};
+```
+
+### Sending the response
+
+```php
+$brw->orderBy[]       = 1;                            // Sort by col 1 ASC
+$brw->tableClass[]    = 'table-sm';
+$brw->tableClass[]    = 'table-striped';
+$brw->tableClass[]    = 'table-hover';
+$brw->tableCSS        = 'white-space: nowrap; cursor: default;';
+$brw->fixedCols       = 1;
+$brw->mainContainerId = 'myApp';
+
+$response = new Response(['ok' => true, 'data' => $brw]);
 $response->send();
 ```
 
 ---
 
-## 6. Busqueda avanzada
+## 8. Advanced Search
 
-El metodo `dataFind(texto, campos)` soporta varios modos de busqueda:
+### Normalisation
 
-### Normalizacion automatica
+Before any comparison, both the data and the search term are normalised by `_norm()`:
 
-Antes de buscar, HugeList normaliza tanto los datos como los terminos de busqueda:
-- Convierte a minusculas
-- Elimina acentos (NFD + strip diacritics): `Garcia` = `garcia` = `García`
-- Canoniza fechas: `15/03/2024` y `2024-03-15` se comparan como `20240315`
+- Converted to lowercase
+- Accents removed via NFD decomposition (`García` → `garcia`)
+- Dates canonised: `15/03/2024` and `2024-03-15` both become `20240315`
 
-### Modos de busqueda
+This makes the search case-insensitive, accent-insensitive and date-format-agnostic.
 
-| Entrada | Modo | Descripcion |
+### Search modes
+
+| Input | Mode | Matches rows where… |
 |---|---|---|
-| `Juan` | Normal | Busca "juan" en los campos indicados |
-| `Juan Pedro` | OR | Registros que contengan "juan" **o** "pedro" |
-| `Juan+Madrid` | AND (`+`) | Registros que contengan "juan" **y** "madrid" |
-| `Juan+Madrid+Ingeniero` | AND multiple | Los tres terminos deben estar presentes |
-| `&Juan Pedro` | AND (legacy `&`) | Ambos terminos deben estar en el **mismo campo** |
+| `Alice` | Simple | Any field contains `"alice"` |
+| `Alice Bob` | **OR** (space-separated) | Any field contains `"alice"` **or** `"bob"` |
+| `Alice+London` | **AND** (`+`) | The record contains both `"alice"` and `"london"` (in any field) |
+| `Alice+London+Engineer` | **AND** multiple | All three terms are present somewhere in the record |
+| `&Alice Bob` | **AND** prefix (`&`) | One field contains both `"alice"` and `"bob"` at the same time |
 
-### Prioridad del `+`
+**Priority rule:** If the search string contains `+`, AND-by-`+` mode is used exclusively (the `&` prefix is ignored). If there is no `+`, spaces produce OR and an optional leading `&` switches to AND.
 
-Si la cadena contiene `+`, se usa el modo AND por `+` (separando por `+`). Si no contiene `+`, se usa el comportamiento clasico (espacios = OR, `&` al inicio = AND).
+### Field-scoped search
 
-### Indice de busqueda lazy
-
-El indice de busqueda (`dataNorm`) se construye de forma **lazy**: solo se genera la primera vez que se llama a `dataFind()`. Si se mueven columnas (`moveColumn()`), el indice se invalida y se reconstruye en la siguiente busqueda.
-
-Los eventos `startIndexing` y `endIndexing` permiten monitorizar este proceso.
-
-### Ejemplos practicos
+Pass a field `name` (or array of names) as the second argument to restrict where the search looks:
 
 ```javascript
-// Buscar clientes de Madrid
-brw.dataFind('Madrid', 'ciudad');                // Solo en "ciudad"
-brw.dataFind('Madrid', '');                      // En todos los campos
+brw.dataFind('London', 'city');              // Only in 'city'
+brw.dataFind('London', ['city', 'country']); // In 'city' or 'country'
+brw.dataFind('London', '');                  // All fields
+```
 
-// Buscar "Juan" que viva en "Madrid"
-brw.dataFind('Juan+Madrid', '');                 // AND: ambos deben existir en el registro
+### Lazy index
 
-// Buscar "Juan" O "Pedro" O "Maria"
-brw.dataFind('Juan Pedro Maria', '');            // OR: cualquiera vale
+The search index (`dataNorm`) is built the first time `dataFind()` is called. Building it once for 100,000 rows typically takes a few hundred milliseconds. Subsequent searches on the same data are instant.
 
-// Buscar por fecha (insensible al formato)
-brw.dataFind('2024', 'fecha');                   // Todos los de 2024
-brw.dataFind('15/03/2024', 'fecha');             // Fecha exacta (normaliza internamente)
+The index is invalidated (and rebuilt on the next search) when `moveColumn()` is called.
 
-// Buscar "ingeniero" en la profesion que viva en "Barcelona"
-brw.dataFind('ingeniero+Barcelona', '');
+Use `indexOnLoad = true` to build it upfront:
 
-// Restaurar todos los registros
+```javascript
+brw.indexOnLoad = true;
+// Then call requestServerData…
+// The index will be built right after initCtl() and fire startIndexing/endIndexing events
+```
+
+### Search examples
+
+```javascript
+// Find everyone named "Alice"
+brw.dataFind('Alice', '');
+
+// Find records from London
+brw.dataFind('London', 'city');
+
+// AND: Alice who lives in London
+brw.dataFind('Alice+London', '');
+
+// OR: Alice or Bob
+brw.dataFind('Alice Bob', '');
+
+// Date search (format-agnostic)
+brw.dataFind('1990', 'date');           // Any date in 1990
+brw.dataFind('15/03/1990', 'date');     // Specific date (normalised internally)
+
+// AND: Engineer living in Paris
+brw.dataFind('Engineer+Paris', '');
+
+// Reset filter (show all rows again)
 brw.dataFindReset();
 ```
 
 ---
 
-## 7. Ordenacion
+## 9. Sorting
 
-### Click simple en cabecera
+### Interactive (click headers)
 
-Un click en una cabecera ordena por esa columna:
-- Primer click: ascendente
-- Segundo click en la misma: descendente
-- Click en otra columna: reemplaza la ordenacion anterior
+- **Single click** on a header: sort by that column ascending.
+- **Click again** on the same header: switch to descending.
+- **Shift + click** or **Alt + click**: add the column as a secondary (then tertiary, …) sort key. Clicking again on an already-added column inverts its direction without removing others.
 
-### Click con Shift o Alt (multi-columna)
+### Visual indicators
 
-Manteniendo **Shift** o **Alt** al hacer click se agrega una columna de ordenacion secundaria:
+Sort direction is shown by small icons injected inside `<th>`:
 
-```
-Click en "Nombre"              --> orderBy = [2]       (col 2 ASC)
-Shift+Click en "Ciudad"        --> orderBy = [2, 6]    (col 2 ASC, col 6 ASC)
-Shift+Click en "Nombre" (otra vez) --> orderBy = [-2, 6]  (col 2 DESC, col 6 ASC)
-```
+- ▼ (`hugelist-sort-down`) — ascending
+- ▲ (`hugelist-sort-up`) — descending
 
-### Iconos
+These icons use Bootstrap Icons glyphs via CSS `::before` pseudo-elements (see the CSS section).
 
-- Flecha abajo: ascendente
-- Flecha arriba: descendente
-
-(Requiere Bootstrap Icons CSS)
-
-### Ordenacion programatica
+### Programmatic sort
 
 ```javascript
-// Ordenar por saldo descendente, luego por nombre ascendente
+// Sort by balance (col 10) descending, then by name (col 2) ascending
 brw.orderBy = [-10, 2];
 brw.order();
 brw.render(0);
-brw.setOrderIcons();  // Actualizar iconos en las cabeceras
+brw.setOrderIcons(); // Refresh header arrows
 ```
+
+`orderBy` uses 1-based indices. Positive = ascending, negative = descending.
 
 ---
 
-## 8. Drag & Drop de columnas
+## 10. Column Drag & Drop
 
-Las columnas se pueden reorganizar arrastrando las cabeceras (`<th>`) con el raton.
+Column headers (`<th>`) are `draggable="true"`. Users can reorder columns by dragging a header horizontally over another.
 
-**Comportamiento visual:**
-- Al iniciar el arrastre, la cabecera origen se vuelve semitransparente.
-- Al pasar sobre otra cabecera, aparece un borde azul en el lado izquierdo.
-- Al soltar, la columna se mueve a la nueva posicion.
+**Visual feedback:**
 
-**Que se reordena:**
-- Array de campos (`fld`)
-- Array de anchos de columnas (`colWidths`)
-- Indices de ordenacion (`orderBy`)
-- **Todas las filas de datos** (in-place, tanto `data` como `dataSrc`)
-- Indices de columnas ocultas (`_hiddenCols`)
-- CSS de campos
-- Cabeceras HTML
+- The dragged header fades to 40% opacity.
+- The target header shows a blue left border while being hovered.
+- On drop, columns swap and the table re-renders.
 
-**El indice de busqueda se invalida** y se reconstruye de forma lazy en la siguiente busqueda.
+**What gets reordered:**
+
+- `fld` array
+- `colWidths` array
+- `orderBy` indices (remapped automatically)
+- All rows in `dataSrc`/`data` (in-place)
+- `_hiddenCols` set (indices remapped)
+- Column CSS and header HTML
+
+**Programmatic reorder:**
 
 ```javascript
-// Mover programaticamente la columna "email" (posicion 3) a la posicion 1
-brw.moveColumn(3, 1);
+brw.moveColumn(0, 2); // Move column at index 0 to index 2
 ```
 
 ---
 
-## 9. Menu contextual de visibilidad de columnas
+## 11. Column Visibility Context Menu
 
-Al hacer **click derecho** sobre cualquier cabecera (`<th>`) de la tabla, aparece un menu contextual con un checkbox por cada campo.
+**Right-click** (or long-press on touch) on any column header opens a floating context menu listing all columns with checkboxes.
 
-**Comportamiento:**
-- Por defecto, todas las columnas estan visibles (checkbox marcado).
-- Desmarcar un checkbox oculta la columna (cabecera + celdas).
-- **No se permite ocultar todas las columnas.** Si solo queda una visible, no se puede desmarcar.
-- El menu se cierra al hacer click fuera o al pulsar **Escape**.
-- Si se mueven columnas despues de ocultar, los indices se remapean correctamente.
+- **Checked** = column is visible.
+- **Unchecked** = column is hidden (via `display:none` CSS injected into `<head>`).
+- At least one column must remain visible — unchecking the last visible column is blocked.
+- The menu closes when you click outside it or press **Escape**.
 
-**Implementacion tecnica:** La visibilidad se aplica mediante CSS dinamico (`display:none` en `th:nth-child(N)` y `td:nth-child(N)`), inyectado en un tag `<style>` con id `{ctlid}_colvis`.
+Hiding/showing columns via this menu updates the `_hiddenCols` set and injects/removes a `<style id="{ctlid}_colvis">` tag.
+
+Programmatic column visibility is also available via [showCol / hideCol](#showcol--hidecol) and [showColByField / hideColByField](#showcolbyfield--hidecolbyfield).
 
 ---
 
-## 10. Interaccion con teclado
+## 12. Keyboard Navigation
 
-Con el foco en la tabla:
+The `<table>` element has `tabindex="0"` so it can receive focus. With focus on the table:
 
-| Tecla | Accion |
+| Key | Action |
 |---|---|
-| Flecha Arriba | Selecciona la fila anterior |
-| Flecha Abajo | Selecciona la fila siguiente |
-| AvPag (Page Down) | Avanza una pagina |
-| RePag (Page Up) | Retrocede una pagina |
-| Inicio (Home) | Va a la primera fila |
-| Fin (End) | Va a la ultima fila |
+| **↑ Arrow Up** | Select the previous row. If at the top of the visible page, goes to the previous page and selects the last row. |
+| **↓ Arrow Down** | Select the next row. If at the bottom of the visible page, goes to the next page and selects the first row. |
+| **Page Down** | Go to the next page. |
+| **Page Up** | Go to the previous page. |
+| **Home** | Jump to the first row of the dataset. |
+| **End** | Jump to the last row of the dataset. |
+
+Row `click` events (from `events['click']`) are **not** fired on keyboard navigation — only on actual mouse/touch clicks.
 
 ---
 
-## 11. Ejemplo completo paso a paso
+## 13. Footer / Totals Row
 
-### Paso 1: HTML
+When any field has a non-empty `colops`, HugeList renders a `<tfoot>` row below the table body showing aggregated values.
 
-```html
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi listado</title>
-    <!-- Bootstrap CSS (para estilos de tabla) -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons (para flechas de ordenacion) -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-</head>
-<body>
+**Enable/disable:**
 
-    <div class="container mt-3">
-        <h4>Listado de clientes</h4>
+| `showTotalRow` value | Behaviour |
+|---|---|
+| `null` (default) | Footer rendered if any `colops` is set. |
+| `true` | Footer always rendered. |
+| `false` | Footer never rendered. |
 
-        <!-- Buscador -->
-        <div class="row mb-2">
-            <div class="col-4">
-                <input type="text" id="buscar" class="form-control form-control-sm" placeholder="Buscar...">
-            </div>
-            <div class="col-2">
-                <select id="campo" class="form-control form-control-sm">
-                    <option value="">Todos los campos</option>
-                </select>
-            </div>
-            <div class="col-1">
-                <button class="btn btn-primary btn-sm" onclick="miApp.buscar()">Buscar</button>
-            </div>
-            <div class="col-2">
-                <span id="info" class="text-muted small"></span>
-            </div>
-        </div>
-
-        <!-- Contenedor de la tabla (HugeList se renderiza aqui) -->
-        <div id="brw" class="table-responsive" style="max-width:100%"></div>
-    </div>
-
-    <!-- jQuery (requerido por HugeList) -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <!-- Picture formatter (requerido si se usan pics) -->
-    <script src="picture.kkcola.js"></script>
-    <!-- HugeList -->
-    <script src="hugelist.js"></script>
-    <script>
-        // ... ver Paso 2 ...
-    </script>
-</body>
-</html>
-```
-
-### Paso 2: JavaScript del cliente
+Pass `showTotalRow` in the `requestServerData` options:
 
 ```javascript
-window.miApp = {
-    brw: null,
-
-    init: function() {
-        this.brw = new HugeList();
-        this.cargarDatos();
-    },
-
-    cargarDatos: function() {
-        this.brw.requestServerData({
-            cmd:   'getDatos',
-            ctlid: 'brw',                        // ID del <div> contenedor
-            data:  { filtro: 'todos' },           // Datos extra para el servidor
-            events: {
-                afterInit: $.proxy(function() {
-                    // Rellenar el select de campos para buscar
-                    $('#campo').append('<option value="">Todos</option>');
-                    for (const [k, fld] of this.brw.fld.entries()) {
-                        $('#campo').append(
-                            '<option value="' + fld.name + '">' + fld.label + '</option>'
-                        );
-                    }
-                    // Mostrar contador
-                    $('#info').text(this.brw.data.length + ' registros');
-                }, this),
-
-                startIndexing: function() {
-                    console.time('Indexando');
-                },
-                endIndexing: function() {
-                    console.timeEnd('Indexando');
-                },
-                notOK: function(ret) {
-                    alert('Error al cargar datos');
-                }
-            }
-        });
-    },
-
-    // Funcion referenciada desde PHP como evento 'click'
-    clickRow: function(rowData) {
-        console.log('Click en fila:', rowData);
-    },
-
-    // Funcion referenciada desde PHP como evento 'dblclick'
-    dblclickRow: function(rowData) {
-        console.log('Doble click en fila:', rowData);
-    },
-
-    buscar: function() {
-        let texto = $('#buscar').val().trim();
-        texto = texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        const campo = $('#campo').val();
-        let n = 0;
-
-        if (texto.length > 0) {
-            n = this.brw.dataFind(texto, campo);
-        } else {
-            n = this.brw.dataFindReset();
-        }
-
-        $('#info').text((n || 0) + ' registros encontrados');
-    }
-};
-
-$(function() {
-    miApp.init();
+brw.requestServerData({
+    cmd:          'getData',
+    ctlid:        'brw',
+    showTotalRow: false  // Disable footer regardless of colops
 });
 ```
 
-### Paso 3: PHP del servidor
+**Footer styling** (from `hugelist.css`):
 
-```php
-<?php
+```css
+.hugelist-table tfoot td {
+    color: green;
+    background-color: rgb(232, 250, 234);
+}
+```
 
-function cmd_getDatos() {
-    $brw = new mibrowser;
+**Post-process totals** with the `formatTotals` callback:
 
-    // Definir campos
-    $brw->fld[] = new mibrowser_fld('id',        'ID',        'N04',            'R', '');
-    $brw->fld[] = new mibrowser_fld('nombre',    'Nombre',    '',               'L', 'color:green');
-    $brw->fld[] = new mibrowser_fld('apellido',  'Apellido',  '',               'C', '');
-    $brw->fld[] = new mibrowser_fld('email',     'Email',     '',               'L', '');
-    $brw->fld[] = new mibrowser_fld('telefono',  'Telefono',  'P###~-~###~-~###','L','');
-    $brw->fld[] = new mibrowser_fld('ciudad',    'Ciudad',    '',               'L', '');
-    $brw->fld[] = new mibrowser_fld('pais',      'Pais',      '',               'L', '');
-    $brw->fld[] = new mibrowser_fld('profesion', 'Profesion', '',               'L', '');
-    $brw->fld[] = new mibrowser_fld('edad',      'Edad',      '',               'R', '');
-    $brw->fld[] = new mibrowser_fld('saldo',     'Saldo',     'N.10',           'R', '');
-    $brw->fld[] = new mibrowser_fld('fecha',     'Fecha',     'D1',             'R', '');
-
-    // Generar datos (en produccion vendrian de una consulta)
-    for ($id = 1; $id <= 100000; $id++) {
-        $brw->data[] = [
-            $id,
-            'Nombre_' . $id,
-            'Apellido_' . $id,
-            'email' . $id . '@ejemplo.com',
-            rand(600000000, 699999999),
-            'Ciudad_' . rand(1, 50),
-            'Pais_' . rand(1, 20),
-            'Profesion_' . rand(1, 30),
-            rand(18, 80),
-            rand(1000, 50000),
-            rand(1970, 2024) . '-' . str_pad(rand(1,12), 2, '0', STR_PAD_LEFT) . '-' . str_pad(rand(1,28), 2, '0', STR_PAD_LEFT)
-        ];
+```javascript
+callbacks: {
+    formatTotals(params) {
+        params.data[0] = params.data[0] + ' rows'; // Decorate count
+        params.data[9] = '€ ' + params.data[9];    // Decorate sum
     }
-
-    // Configuracion
-    $brw->orderBy[]    = 1;                           // Ordenar por ID ascendente
-    $brw->tableClass[] = 'table-sm';
-    $brw->tableClass[] = 'table-striped';
-    $brw->tableClass[] = 'table-hover';
-    $brw->tableCSS     = 'white-space:nowrap; cursor:default;';
-    $brw->fixedCols    = 1;                           // Columna ID fija
-    $brw->mainContainerId = 'miApp';
-
-    // Eventos de fila
-    $brw->events['click']    = 'miApp.clickRow';
-    $brw->events['dblclick'] = 'miApp.dblclickRow';
-
-    // Enviar respuesta
-    $response = new Response(['ok' => true, 'data' => $brw]);
-    $response->send();
 }
 ```
 
 ---
 
-## 12. Referencia rapida de la estructura PHP
+## 14. CSS Reference (`hugelist.css`)
 
-### mibrowser_fld - Propiedades
-
-| Propiedad | Tipo | Descripcion | Ejemplo |
-|---|---|---|---|
-| `name` | `string` | Nombre interno (para busquedas por campo) | `'nombre'` |
-| `label` | `string` | Texto visible en la cabecera | `'Nombre'` |
-| `pic` | `string` | Picture de formato (vacio = sin formato) | `'N04'`, `'D1'`, `'P###-###'` |
-| `align` | `string` | Alineacion: `'L'`, `'R'`, `'C'` | `'R'` |
-| `css` | `string` | CSS adicional para todas las celdas de esta columna | `'color:green; font-weight:bold'` |
-
-### mibrowser - Propiedades
-
-| Propiedad | Tipo | Descripcion | Ejemplo |
-|---|---|---|---|
-| `data` | `array` | Array de filas (cada fila es un array posicional) | `[[1,'Juan',...], [2,'Ana',...]]` |
-| `fld` | `array` | Array de `mibrowser_fld` | |
-| `tableCSS` | `string` | CSS inline del `<table>` | `'white-space:nowrap;'` |
-| `tableClass` | `array` | Clases del `<table>` | `['table-sm','table-striped']` |
-| `orderBy` | `array` | Indices 1-based de ordenacion | `[1, -3]` |
-| `events` | `array` | Eventos de fila | `['click' => 'fn']` |
-| `fixedCols` | `int` | Columnas sticky a la izquierda | `1` |
-| `mainContainerId` | `string` | ID del contenedor principal | `'miApp'` |
-
-### Response - Propiedades
-
-| Propiedad | Tipo | Descripcion |
-|---|---|---|
-| `ok` | `bool` | `true` si la operacion fue correcta |
-| `data` | `mixed` | Datos a devolver (normalmente un `mibrowser`) |
-| `html` | `string` | HTML auxiliar (si se necesita) |
-| `css` | `string` | CSS auxiliar |
-| `js` | `string` | JavaScript auxiliar |
+The `hugelist.css` file provides all the structural and visual styles required by HugeList. Below is a section-by-section explanation.
 
 ---
 
-## Notas finales
+### Table base
 
-- **Rendimiento:** HugeList esta optimizado para manejar cientos de miles de filas. Solo se renderizan las filas visibles en el viewport (scroll virtual). El indice de busqueda se construye una sola vez y se reutiliza.
+```css
+.hugelist-table {
+    overflow-y: hidden;
+    margin: 0px;
+}
+```
 
-- **CSS dinamico:** HugeList inyecta varios tags `<style>` en el `<head>`:
-  - `#{ctlid}_css` — Estilos de layout (scrollbar, focus, etc.)
-  - `#{ctlid}_fldcss` — Estilos de campos (alineacion, CSS custom por columna)
-  - `#{ctlid}_colvis` — Visibilidad de columnas ocultas
-  - CSS global con `.prevent-select` y `.hugelist-colmenu`
+Prevents the native browser scrollbar from appearing on the table. Margin is zeroed so the table fills its wrapper without gaps.
 
-- **Sin framework:** No depende de `mifw`, `dvShow`, `CONTEXT` ni ningun otro componente del framework. Solo necesita jQuery y opcionalmente `gobpicjs` y Bootstrap Icons.
+```css
+.hugelist-table:focus {
+    outline: none;
+}
+```
+
+Removes the default focus ring from the `<table>` (which has `tabindex="0"`). This keeps the UI clean; focus styling is applied on individual rows instead.
+
+---
+
+### Header — text selection & cursor
+
+```css
+.hugelist-table .prevent-select {
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+```
+
+Applied to `<thead>` via the class `prevent-select`. Prevents accidental text selection when clicking headers rapidly for sorting.
+
+```css
+.hugelist-table thead th {
+    background-color: #93bdf9;
+}
+
+.hugelist-table thead th[draggable] {
+    cursor: grab;
+}
+```
+
+Headers have a light blue background. The `grab` cursor signals that columns are draggable.
+
+---
+
+### Row selection & focus
+
+```css
+.hugelist-table tbody tr:focus {
+    border: 2px solid rgb(31, 110, 51) !important;
+}
+
+.hugelist-table tbody tr:nth-child(even):focus td,
+.hugelist-table tbody tr:nth-child(odd):focus td {
+    background-color: #55f3a9 !important;
+}
+```
+
+The selected/focused row gets a green border and a bright green cell background, regardless of whether it is an even or odd row. The `!important` overrides Bootstrap's striped row colours.
+
+---
+
+### Striped rows
+
+```css
+.hugelist-table tbody tr:nth-child(even) td {
+    background: #d1dcf0 !important;
+}
+.hugelist-table tbody tr:nth-child(odd) td {
+    background: #EEE !important;
+}
+```
+
+Alternating row colours (light blue-grey for even, light grey for odd). These defaults work with or without Bootstrap's `table-striped` class. Override in your own stylesheet as needed.
+
+> **Note:** The first column has a special override in the example CSS for demo purposes:
+> ```css
+> .hugelist-table tbody td:nth-child(1) {
+>     color: red;
+>     text-align: right;
+> }
+> ```
+> Remove or replace this rule in your own project.
+
+---
+
+### Footer
+
+```css
+.hugelist-table tfoot {
+    display: table-footer-group;
+}
+
+.hugelist-table tfoot td {
+    color: green;
+    background-color: rgb(232, 250, 234);
+}
+```
+
+Makes the `<tfoot>` behave as a normal footer group and gives it a light green background with green text to visually distinguish totals from data rows.
+
+---
+
+### Scroll wrapper
+
+```css
+.hugelist-scroll-wrapper {
+    display: flex;
+    align-items: stretch;
+    margin-top: 10px;
+}
+```
+
+The `<table>` and the custom scrollbar live side-by-side in a flex container. `align-items: stretch` makes the scrollbar track grow to the full height of the table.
+
+---
+
+### Custom scrollbar track
+
+```css
+.hugelist-scrollbar {
+    position: relative;
+    width: 20px;
+    min-width: 20px;
+    background-color: #dddddd8f;
+    border-radius: 5px;
+    opacity: 1;
+}
+```
+
+A narrow, semi-transparent grey track sits to the right of the table. Fixed at 20 px wide.
+
+---
+
+### Custom scrollbar thumb (pointer)
+
+```css
+.hugelist-scrollbar .hugelist-scrollbar-ptr {
+    position: relative;
+    width: 100%;
+    height: 0px;         /* Height is set dynamically via JS */
+    background-color: rgba(139, 139, 139, 1);
+    min-height: 10px;
+    user-select: none;
+    display: flex;
+    border-radius: 20px;
+}
+```
+
+The thumb height is calculated by JavaScript as a proportion of the total row count. `user-select: none` prevents text selection while dragging. The `min-height: 10px` ensures the thumb is always clickable even with very large datasets.
+
+---
+
+### Overlay element
+
+```css
+.hugelist-overlay-element {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+    display: none;
+    background: transparent;
+}
+```
+
+A full-screen invisible overlay that is shown while the scrollbar thumb is being dragged. This captures `mousemove` events even when the cursor leaves the scrollbar area, preventing the drag from sticking or stopping unexpectedly.
+
+---
+
+### Sort icons
+
+```css
+.hugelist-sort::before,
+[class*=" hugelist-sort-"]::before,
+[class^=hugelist-sort-]::before {
+    display: inline-block;
+    font-family: bootstrap-icons !important;
+    font-style: normal;
+    font-weight: 400 !important;
+    /* … standard Bootstrap Icons setup … */
+}
+
+.hugelist-sort-down::before {
+    content: "\f575"; /* bi-sort-down ▼ */
+}
+
+/* Note: .hugelist-sort-sort-up is the class name in the source */
+.hugelist-sort-sort-up::before {
+    content: "\f57b"; /* bi-sort-up ▲ */
+}
+```
+
+Sort icons are rendered using Bootstrap Icons' icon font. The `<i>` elements are injected into `<th>` by `setOrderIcons()`. If Bootstrap Icons is not loaded, no icon is displayed (the header is still clickable).
+
+---
+
+### Column visibility context menu
+
+```css
+.hugelist-colmenu {
+    position: absolute;
+    z-index: 10000;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .25);
+    padding: 6px 0;
+    min-width: 180px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+```
+
+The context menu is absolutely positioned at the mouse pointer coordinates (adjusted to stay inside the viewport). It can scroll if there are many columns.
+
+```css
+.hugelist-colmenu-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    font-size: 13px;
+}
+
+.hugelist-colmenu-item:hover {
+    background: #f0f0f0;
+}
+
+.hugelist-colmenu-item input[type="checkbox"] {
+    margin: 0;
+}
+```
+
+Each menu item is a `<label>` containing a checkbox and the column name. Hover highlight is a subtle grey. The menu is removed from the DOM when dismissed.
+
+---
+
+### Dynamic `<style>` tags injected by HugeList
+
+In addition to `hugelist.css`, HugeList injects these `<style>` tags into `<head>` at runtime:
+
+| Tag `id` | Content |
+|---|---|
+| `#{ctlid}_css` | Fixed-column (`sticky`) rules and field CSS (alignment, custom CSS per column). |
+| `#{ctlid}_colvis` | `display:none` rules for hidden columns (managed by the context menu). |
+
+These tags are replaced (not duplicated) on re-initialisation and after column moves.
+
+---
+
+### Customising the CSS
+
+You can override any rule in your own stylesheet after `hugelist.css` is loaded. Common customisations:
+
+```css
+/* Change header background */
+.hugelist-table thead th {
+    background-color: #1e3a5f;
+    color: #fff;
+}
+
+/* Change selected row colour */
+.hugelist-table tbody tr:nth-child(even):focus td,
+.hugelist-table tbody tr:nth-child(odd):focus td {
+    background-color: #ffd966 !important;
+}
+
+/* Remove alternating row colours (use Bootstrap's table-striped instead) */
+.hugelist-table tbody tr:nth-child(even) td,
+.hugelist-table tbody tr:nth-child(odd) td {
+    background: unset !important;
+}
+
+/* Wider scrollbar */
+.hugelist-scrollbar {
+    width: 12px;
+    min-width: 12px;
+}
+```
+
+---
+
+## 15. Complete Example (step by step)
+
+### Step 1 — HTML page
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HugeList Demo</title>
+
+    <!-- Bootstrap CSS (optional) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons (for sort arrows) -->
+    <style>
+        @import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css");
+    </style>
+    <!-- HugeList styles -->
+    <link rel="stylesheet" href="hugelist.css">
+
+    <style>
+        body { padding: 20px; overflow-y: hidden; }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <h4>Customer List</h4>
+
+    <!-- Search bar -->
+    <form onsubmit="myApp.search(); return false;" class="row g-2 mb-2">
+        <div class="col-auto">
+            <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search…">
+        </div>
+        <div class="col-auto">
+            <select id="fieldSelect" class="form-select form-select-sm">
+                <option value="">All fields</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary btn-sm" type="submit">Search</button>
+            <button class="btn btn-secondary btn-sm" type="button" onclick="myApp.resetSearch()">Reset</button>
+        </div>
+        <div class="col-auto">
+            <span id="rowCount" class="text-muted small align-middle"></span>
+        </div>
+    </form>
+
+    <!-- HugeList renders inside this div -->
+    <div id="brw" style="max-width:100%;"></div>
+</div>
+
+<!-- jQuery (required) -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<!-- Picture.js (optional, for pic formatting) -->
+<script type="module">
+    import { Picture } from "https://cdn.jsdelivr.net/gh/frikimirinda/picture@v.1.0.0/dist/picture.min.js";
+    window.Picture = Picture;
+</script>
+
+<!-- HugeList -->
+<script src="hugelist.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
+```
+
+### Step 2 — JavaScript (`app.js`)
+
+```javascript
+window.myApp = {
+    brw: null,
+
+    init() {
+        this.brw = new HugeList();
+        this.brw.indexOnLoad = false; // Build search index lazily (default)
+        this.loadData();
+
+        window.onresize = () => this.brw.resize();
+    },
+
+    loadData() {
+        this.brw.requestServerData({
+            cmd:   'getData',
+            ctlid: 'brw',
+            url:   '/api/data.php',
+            data:  { limit: 50000 },
+
+            events: {
+                beforeInit(ret) {
+                    // If server sends data as a JSON string, parse it here
+                    if (typeof ret.data.data === 'string') {
+                        ret.data.data = JSON.parse(ret.data.data);
+                    }
+                },
+
+                afterInit: () => {
+                    // Populate field selector
+                    const $sel = $('#fieldSelect');
+                    $sel.html('<option value="">All fields</option>');
+                    for (const [, fld] of this.brw.fld.entries()) {
+                        $sel.append(`<option value="${fld.name}">${fld.label}</option>`);
+                    }
+                    this.showCount(this.brw.data.length);
+                },
+
+                startIndexing: () => { $('#rowCount').text('Building search index…'); },
+                endIndexing:   () => { this.showCount(this.brw.data.length); },
+
+                notOK(ret) {
+                    alert('Failed to load data. Check server logs.');
+                    console.error(ret);
+                }
+            },
+
+            callbacks: {
+                formatRow(params) {
+                    // Highlight negative balances in red
+                    if (params.data[9] < 0) {
+                        params.data[9] = `<span style="color:red">${params.data[9]}</span>`;
+                    }
+                    return params.data;
+                },
+
+                formatTotals(params) {
+                    // Annotate the count cell
+                    if (params.data[0]) params.data[0] += ' rows';
+                    // Annotate the balance sum
+                    if (params.data[9]) params.data[9] = '$ ' + params.data[9];
+                }
+            }
+        });
+    },
+
+    // Called from PHP via events['click'] = 'myApp.clickRow'
+    clickRow(rowData, idx) {
+        console.log('Row clicked:', rowData);
+    },
+
+    // Called from PHP via events['dblclick'] = 'myApp.dblClickRow'
+    dblClickRow(rowData, idx) {
+        alert(`Open detail for ${rowData[1]} ${rowData[2]}`);
+    },
+
+    search() {
+        let term = $('#searchInput').val().trim();
+        // Normalise accents in the input before searching
+        term = term.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const field = $('#fieldSelect').val();
+
+        let n;
+        if (term.length > 0) {
+            n = this.brw.dataFind(term, field);
+        } else {
+            n = this.brw.dataFindReset();
+        }
+        this.showCount(n);
+    },
+
+    resetSearch() {
+        $('#searchInput').val('');
+        const n = this.brw.dataFindReset();
+        this.showCount(n);
+    },
+
+    showCount(n) {
+        $('#rowCount').text(n.toLocaleString() + ' records');
+    }
+};
+
+$(function() {
+    myApp.init();
+});
+```
+
+### Step 3 — PHP server (`data.php`)
+
+```php
+<?php
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+
+// --- Helper classes (include from a shared file in production) ---
+
+class mibrowser_fld {
+    public $name, $label, $pic, $align, $css, $colops;
+    public function __construct($n,$l='',$p='',$a='',$c='',$o=''){
+        $this->name=$n; $this->label=$l; $this->pic=$p;
+        $this->align=$a; $this->css=$c; $this->colops=$o;
+    }
+}
+
+class mibrowser {
+    public $data=[], $fld=[], $tableCSS='', $tableClass=[];
+    public $orderBy=[], $events=[], $fixedCols=0, $mainContainerId='';
+}
+
+class Response {
+    public $ok=true, $data='', $html='', $css='', $js='', $fld=[];
+    public function __construct($op){ if(is_array($op)) foreach($op as $k=>$v) if(property_exists($this,$k)) $this->$k=$v; }
+    public function send(){ echo json_encode($this); exit; }
+}
+
+// --- Data endpoint ---
+
+function cmd_getData() {
+    $brw = new mibrowser;
+
+    $brw->fld[] = new mibrowser_fld('id',         'ID',         'N04',              'R', '',            'c');
+    $brw->fld[] = new mibrowser_fld('name',        'Name',       '',                 'L', 'color:green', '');
+    $brw->fld[] = new mibrowser_fld('surname',     'Surname',    '',                 'L', '',            '');
+    $brw->fld[] = new mibrowser_fld('email',       'Email',      '',                 'L', '',            '');
+    $brw->fld[] = new mibrowser_fld('phone',       'Phone',      'P###~-~###~-~###', 'L', '',            '');
+    $brw->fld[] = new mibrowser_fld('city',        'City',       '',                 'L', '',            '');
+    $brw->fld[] = new mibrowser_fld('country',     'Country',    '',                 'L', '',            '');
+    $brw->fld[] = new mibrowser_fld('age',         'Age',        '',                 'R', '',            'a');
+    $brw->fld[] = new mibrowser_fld('profession',  'Profession', '',                 'L', '',            '');
+    $brw->fld[] = new mibrowser_fld('balance',     'Balance',    'N.10',             'R', '',            's');
+    $brw->fld[] = new mibrowser_fld('date',        'Date',       'D1',               'R', '',            '');
+
+    // Build data (replace with your DB query)
+    $limit = min((int)($_POST['data']['limit'] ?? 1000), 1000000);
+    $rows  = [];
+    for ($i = 1; $i <= $limit; $i++) {
+        $rows[] = [
+            $i,
+            'Name_'    . $i,
+            'Surname_' . $i,
+            'user'     . $i . '@example.com',
+            rand(600000000, 699999999),
+            'City_'    . rand(1, 50),
+            'Country_' . rand(1, 20),
+            rand(18, 80),
+            'Profession_' . rand(1, 10),
+            rand(1000, 50000),
+            date('Y-m-d', mktime(0, 0, 0, rand(1,12), rand(1,28), rand(1970, 2024)))
+        ];
+    }
+
+    // For large datasets send data as a JSON string to avoid PHP's memory limit
+    // on json_encode of the full object. Parse it in beforeInit on the client.
+    $brw->data        = json_encode($rows);
+
+    $brw->orderBy[]   = 1;
+    $brw->tableClass  = ['table-sm', 'table-striped', 'table-hover'];
+    $brw->tableCSS    = 'white-space: nowrap; cursor: default;';
+    $brw->fixedCols   = 1;
+    $brw->mainContainerId = 'myApp';
+
+    $brw->events['click']    = 'myApp.clickRow';
+    $brw->events['dblclick'] = 'myApp.dblClickRow';
+
+    (new Response(['ok' => true, 'data' => $brw]))->send();
+}
+
+// Dispatch
+$cmd = $_POST['cmd'] ?? '';
+if ($cmd === 'getData') cmd_getData();
+else { echo json_encode(['ok'=>false,'msg'=>'Unknown command']); }
+```
+
+---
+
+## 16. Quick Reference — PHP structures
+
+### `mibrowser_fld` properties
+
+| Property | Type | Description | Example |
+|---|---|---|---|
+| `name` | `string` | Internal field identifier (for field-scoped search) | `'balance'` |
+| `label` | `string` | Column header text | `'Balance'` |
+| `pic` | `string` | Format picture (see [Section 7](#picture-format-codes-pic)) | `'N.10'`, `'D1'`, `'P###-###'` |
+| `align` | `string` | `'L'` left \| `'R'` right \| `'C'` center \| `'H'` hidden | `'R'` |
+| `css` | `string` | Extra CSS applied to all `<td>` in this column | `'font-weight:bold; color:navy'` |
+| `colops` | `string` | Footer aggregation: `'c'` count \| `'s'` sum \| `'a'` average \| `''` none | `'s'` |
+
+### `mibrowser` properties
+
+| Property | Type | Description | Example |
+|---|---|---|---|
+| `data` | `array\|string` | Row data (array of arrays, or a JSON-encoded string) | `[[1,'Alice',...], ...]` |
+| `fld` | `array` | Array of `mibrowser_fld` | — |
+| `tableCSS` | `string` | Inline style for `<table>` | `'white-space:nowrap;'` |
+| `tableClass` | `array` | CSS classes for `<table>` | `['table-sm','table-striped']` |
+| `orderBy` | `array` | 1-based sort indices (positive ASC, negative DESC) | `[1, -3]` |
+| `events` | `array` | Row events | `['click' => 'myApp.fn']` |
+| `fixedCols` | `int` | Number of left-sticky columns | `1` |
+| `mainContainerId` | `string` | ID of the top-level app container | `'myApp'` |
+
+### `Response` properties
+
+| Property | Type | Description |
+|---|---|---|
+| `ok` | `bool` | `true` if the operation succeeded |
+| `data` | `mixed` | The `mibrowser` object (serialised to JSON) |
+| `html` | `string` | Optional auxiliary HTML |
+| `css` | `string` | Optional auxiliary CSS |
+| `js` | `string` | Optional auxiliary JavaScript |
+| `fld` | `array` | Field definitions (also included inside `data`) |
+
+---
+
+## Notes & Tips
+
+- **Memory:** With 300,000+ rows, the main memory consumer is `dataSrc` and `dataNorm`. Both are plain JS arrays. Modern browsers handle tens of millions of cell values without issue.
+- **Performance:** Avoid heavy work inside `formatRow` — it is called every time a page of rows is rendered (on every scroll event).
+- **Token auth:** `post()` automatically reads `localStorage.getItem('token')` and includes it in every POST. If your app does not use token auth, this is harmless.
+- **No `mifw` dependency:** HugeList was refactored to be fully standalone. The global `CONTEXT` variable used as default URL is optional — you can always pass an explicit `url`.
+- **Dynamic CSS injection:** HugeList injects `<style>` tags with predictable IDs (`#{ctlid}_css`, `#{ctlid}_colvis`). They are safely replaced (not duplicated) on every re-init or column operation.

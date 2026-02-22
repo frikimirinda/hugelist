@@ -1,9 +1,6 @@
-.hugelist-scroll-wrapper {
-    display: flex;
-    align-items: stretch;
-    margin-top: 10px;
-}
-
+/*
+    CSS for hugelist.js
+*/
 .hugelist-table {
     overflow-y: hidden;
     margin: 0px;
@@ -18,12 +15,6 @@
     -ms-user-select: none;
     user-select: none;
 }
-
-/*
-.hugelist-table .container {
-    -max-width: 100%;
-}
-*/
 
 .hugelist-table thead th {
     background-color: #93bdf9;
@@ -49,17 +40,19 @@
     background-color: #55f3a9 !important;
 }
 
+/* 
+    You can use this to colorize even & odss or "table-striped" (see on data_server.php)
+*/
 .hugelist-table tbody tr:nth-child(even) td {
-    background: #c5d9ff !important;
+    background: #d1dcf0 !important;
 }
-
 .hugelist-table tbody tr:nth-child(odd) td {
     background: #EEE !important;
 }
 
 
-.hugelist-table tfoot tr {
-    -font-size: 150%;
+.hugelist-table tfoot {
+    display: table-footer-group;
 }
 
 .hugelist-table tfoot td  {
@@ -68,6 +61,12 @@
 }
 
 /* SCROLLBAR */
+
+.hugelist-scroll-wrapper {
+    display: flex;
+    align-items: stretch;
+    margin-top: 10px;
+}
 .hugelist-scrollbar {
     position: relative;
     width: 20px;

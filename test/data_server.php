@@ -64,56 +64,55 @@ $firstTime = true;
 
 
 // Generate random data
-for ($id = 1; $id <= $records; $id++) {
-    //$brw->data[] = generarClienteAleatorio( $id );
-    $d[] = generarClienteAleatorio($id);
-    $tr += 1;
-    if ($tr >= $maxtosave) {
-        saveJSON(json_encode($d));
-        $d = array();
-        $tr = 0;
+    for ($id = 1; $id <= $records; $id++) {
+        //$brw->data[] = generarClienteAleatorio( $id );
+        $d[] = generarClienteAleatorio($id);
+        $tr += 1;
+        if ($tr >= $maxtosave) {
+            saveJSON(json_encode($d));
+            $d = array();
+            $tr = 0;
+        }
     }
-}
-if (count($d) > 0) {
-    saveJSON(json_encode($d));
-}
-
-// Save json file
-$input = fopen($targetFile, 'r');
-$output = fopen($targetFile2, 'w');
-// Escribir caracter al inicio
-fwrite($output, '[');
-// Copiar contenido en bloques
-while (!feof($input)) {
-    fwrite($output, fread($input, 8192));
-}
-// Escribir caracter al final
-fwrite($output, ']');
-fclose($input);
-fclose($output);
-// Reemplazar el original
-rename($targetFile2, $targetFile);
-chmod($targetFile, 0644);
+    if (count($d) > 0) {
+        saveJSON(json_encode($d));
+    }
+    // Save json file
+    $input  = fopen($targetFile, 'r');
+    $output = fopen($targetFile2, 'w');
+    // Write first char
+    fwrite($output, '[');
+    // Copy contens by chunks
+    while (!feof($input)) {
+        fwrite($output, fread($input, 8192));
+    }
+    // Write last char
+    fwrite($output, ']');
+    fclose($input);
+    fclose($output);
+    // Replace source file
+    rename($targetFile2, $targetFile);
+    chmod($targetFile, 0644);
 
 
 
-$brw->orderBy[] = 1;
-$brw->tableClass[] = 'table-sm';
-$brw->tableClass[] = 'table-striped';
-$brw->tableClass[] = 'table-hover';
-$brw->tableCSS = 'white-space: nowrap; cursor:default; ';
-$brw->events['click'] = "{$mainContainer}.clickRow";
-$brw->events['dblclick'] = "{$mainContainer}.dblclickRow";
-$brw->fixedCols = 0; // número de columnas fijas a la izquierda
-$brw->mainContainerId = $mainContainer;
-$brw->data = file_get_contents($targetFile) ?: '[]';
+$brw->orderBy[]         = 1;
+$brw->tableClass[]      = 'table-sm';
+$brw->tableClass[]      = 'table-striped';
+$brw->tableClass[]      = 'table-hover';
+$brw->tableCSS          = 'white-space: nowrap; cursor:default; ';
+$brw->events['click']   = "{$mainContainer}.clickRow";
+$brw->events['dblclick']= "{$mainContainer}.dblclickRow";
+$brw->fixedCols         = 1; // number of fixed cols to the left
+$brw->mainContainerId   = $mainContainer;
+$brw->data              = file_get_contents($targetFile) ?: '[]';
 
 
 // Endding...
 $response = new Response([
-    'ok' => true,
-    'data' => $brw,
-    'fld' => $brw->fld,
+    'ok'    => true,
+    'data'  => $brw,
+    'fld'   => $brw->fld,
 ]);
 
 

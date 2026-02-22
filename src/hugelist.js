@@ -175,20 +175,24 @@ class HugeList {
 
         this.ctl.html(ta);
 
-        /*
-        $(cssScript).remove();
-        $('#' + this.ctlid + '_fldcss').remove();
-        */
-
         let css = '';
 
         // CSS for fixed cells
         if (this.fixedCols > 0) {
+            for (let i = 1; i <= this.fixedCols; i++) {
+                css += `
+                    #${this.ctlid} table tr > th:nth-child(${i}),
+                    #${this.ctlid} table tr > td:nth-child(${i}) {
+                        position: -webkit-sticky;
+                        position: sticky;
+                        left: 0;
+                        z-index: 1;
+                    }
+                `;
+            }
             css += `
-                #${this.ctlid} table tr>th:nth-child(-n+${this.fixedCols}),tr>td:nth-child(-n+${this.fixedCols}) {
-                    position: -webkit-sticky;
-                    position: sticky;
-                    left: 0;
+                #${this.ctlid} table thead tr > th:nth-child(-n+${this.fixedCols}) {
+                    z-index: 2;
                 }
             `;
         }
@@ -740,6 +744,7 @@ class HugeList {
         this.render(this.renderFrom);
 
         this.checkUnfavorableColWidths();
+        this._updateFixedColOffsets();
         this.resetScrollbar();
     }
 
@@ -780,6 +785,7 @@ class HugeList {
         this.ctl.find('tbody').html(tr);
 
         this.checkUnfavorableColWidths();
+        this._updateFixedColOffsets();
         this.resetScrollbar();
     }
 
@@ -838,6 +844,9 @@ class HugeList {
         return this.totalrow;
     }
 
+    showFooter(flg) {
+        this.ctl.find('tfoot').toggle(flg);
+    }
 
 
 
@@ -1163,6 +1172,16 @@ class HugeList {
                 this.colWidths[i] = w;
             $(e).css('width', this.colWidths[i]);
         });
+    }
+
+    _updateFixedColOffsets() {
+        if (this.fixedCols <= 0) return;
+        let offset = 0;
+        for (let i = 1; i <= this.fixedCols; i++) {
+            this.ctl.find(`table tr th:nth-child(${i}), table tr td:nth-child(${i})`).css('left', offset + 'px');
+            const w = this.colWidths[i - 1] || this.ctl.find(`table thead th:nth-child(${i})`).outerWidth() || 0;
+            offset += w;
+        }
     }
 }
 
