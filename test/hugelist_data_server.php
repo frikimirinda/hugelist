@@ -9,10 +9,19 @@ header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Credentials: true");
 
+// Send fixed json files
+$serveExistingFiles = true;
+$removeGeneratedFiles = false;
+$sendResponse = false;
+$sendGeneratedFile = !$sendResponse;
+
+/*
+Live generation
 $serveExistingFiles = false;
 $removeGeneratedFiles = false;
 $sendResponse = true;
 $sendGeneratedFile = !$sendResponse;
+*/
 
 $records = (int)($_POST['data']['ramount'] ?? 1000);
 $targetFile = dirname(__FILE__) . '/_tmp/' . $records . '.json';
