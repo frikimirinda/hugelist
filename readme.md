@@ -3,9 +3,9 @@
 [![GitHub Repo](https://img.shields.io/badge/GitHub-gray?logo=github)](https://github.com/frikimirinda/hugelist)
 [![GitHub Repo](https://img.shields.io/badge/npm-gray?logo=npm)](https://www.npmjs.com/package/hugelist)
 
-
-
 **HugeList** is a standalone JavaScript class for rendering large tabular datasets (300,000+ rows) in the browser. It uses virtual scrolling so only the visible rows are ever rendered, making it fast even with massive datasets.
+
+#### [You can try a live sample on here](https://frikimirinda.github.io/hugelist/test/test_hugelist_01.html)
 
 ## Overview
 
@@ -31,6 +31,3 @@ You can view all documentation on [hugelist.md](docs/HugeList.md)
 <p align="center">
   <a href="https://www.mirinda.es" title="go to mirinda.es"><img src="test/assets/mirinda_es.svg" width="227"></a>
 </p>
-
-
-
