@@ -5,7 +5,7 @@
 
 **HugeList** is a standalone JavaScript class for rendering large tabular datasets (300,000+ rows) in the browser. It uses virtual scrolling so only the visible rows are ever rendered, making it fast even with massive datasets.
 
-#### [You can try a live sample on here](https://frikimirinda.github.io/hugelist/test/test_hugelist_01.html)
+#### [You can try a live sample here](https://frikimirinda.github.io/hugelist/test/test_hugelist_01.html)
 
 ## Overview
 
